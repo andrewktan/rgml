@@ -5,7 +5,6 @@ class DIB:
     eps = 1e-12
 
     def __init__(self, pxy, beta=5, hiddens=100):
-
         self.beta = beta
         self.hiddens = hiddens
 
@@ -27,7 +26,6 @@ class DIB:
 
 
     def compress(self, epsilon=1e-4):
-        # init
         self._update()
 
         cost_prev = 1e6
@@ -45,16 +43,19 @@ class DIB:
 
         self._cleanup()
 
+# core DIB helper functions #
+
     def _update(self):
         """
         recalculates q(t) and q(t|x) for current cluster assignments
         """
-        self.qt = np.zeros(self.hiddens) 
+        self.qt = np.zeros(self.hiddens)
         self.qy_t = np.zeros((self.ysz, self.hiddens))
+
         for x in range(self.xsz):
             t = self.f[x]
             self.qt[t] += self.px[x]
-    
+
         for x in range(self.xsz):
             t = self.f[x]
             self.qy_t[:,t] += divide(self.pxy[x,:], self.qt[t])
@@ -67,17 +68,17 @@ class DIB:
         for x in range(self.xsz):   # can this be simplified?
             for t in range(self.hiddens):
                 for y in range(self.ysz):
-                    d[x,t] += self.py_x[y,x] * (np.log(self.py_x[y,x] + DIB.eps) - np.log(self.qy_t[y,t] + DIB.eps))
+                    d[x,t] += self.py_x[y,x] * (\
+                            np.log(self.py_x[y,x] + DIB.eps) - \
+                            np.log(self.qy_t[y,t] + DIB.eps))
 
         l = np.log(self.qt + DIB.eps) - self.beta * d
         #l = -d
 
-        self.qt_x = l.T     # not correct, but should work for current DIB scheme
+        self.qt_x = l.T     # not correct, but should work for DIB scheme
 
-        self.f = np.argmax(self.qt_x, axis=0)
+        # try to merge clusters
 
-        self.d = d
-        self.l = l
 
         cost = 0
         for x in range(self.xsz):
@@ -85,7 +86,7 @@ class DIB:
             cost += l[x,t]
 
         return cost
-   
+
     def _cleanup(self):
         """
         cleanup and relabel unused clusters
@@ -96,26 +97,61 @@ class DIB:
 
         self.hiddens = uniques.size
 
-    def report(self):
+# reporting and visualization #
+
+    def report_clusters(self):
         """
         returns current cluster assignmetns
         """
-        print("Found %d clusters with beta = %.1f" % (np.unique(self.f).size, self.beta))
+        print("Found %d clusters with beta = %.1f" % \
+                (np.unique(self.f).size, self.beta))
         return self.f
 
-    def visualize_clusters(self):
+    def visualize_clusters(self, vsz=3):
         """
         displays clusters
         """
+        qx_t = np.zeros((vsz*vsz, self.hiddens))  # hardcoded system size
         finv = {x: set() for x in range(self.hiddens)}
 
         for idx, element in enumerate(self.f):
-            finv[element].add(idx)
+           finv[element].add(idx)
 
-        avg_counts = {c: np.mean([bin(x).count('1') for x in finv[c]]) for c in range(len(finv))}
+        print({t: np.mean([bin(x).count('1') for x in finv[t]]) for t in finv})
+        for t in finv:
+            qx_t[:,t] = np.mean(\
+                    np.array([self._bin2row(x, vsz*vsz) for x in finv[t]]),\
+                    axis=0)
 
-        print(avg_counts)
+        clusters = np.zeros((vsz, vsz*self.hiddens))
 
+        for t in finv:
+            clusters[:,t*vsz:(t+1)*vsz] = \
+                    qx_t[:,t].reshape(vsz,vsz)
+
+        plt.matshow(clusters, cmap=plt.cm.gray)
+        plt.show()
+
+        return qx_t
+
+    def mutual_information(self):
+        """
+        returns mutual information between cluster assignments and environment
+        I(H;E)
+        """
+        pass
+
+    def _bin2row(self, x, sz=9):
+        """
+        converts x to binary row (big endian)
+        - this could probably be more efficient
+        """
+        return np.array([(x//2**k) % 2 == 1 for k in range(sz)])
+
+
+
+
+# helpful functions #
 
 def debugshow(thing):
     plt.matshow(thing,cmap=plt.cm.gray)

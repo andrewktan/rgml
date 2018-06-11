@@ -6,11 +6,11 @@ from ising_iterator import *
 ## parameters ##
 ################
 
-dfile = '/Users/andrew/Documents/rgml/ising/data_0_50.txt'
+dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50.txt'
 sz = 25     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
 stride = 3
-bsize = 1   # size of buffer (sq)
+bsize = 3   # size of buffer (sq)
 esize = 4   # environment size
 tsize = 1000000   # table size
 
@@ -21,9 +21,14 @@ samples = IsingIterator(dfile)
 
 # randomly choose environment #
 # #############################
-env = np.empty((esize, 2), dtype=np.int32)
-for i in range(esize):
-    env[i,:] = np.random.randint(sz - vsize//2 - 2*bsize, size=2)
+
+# env = np.empty((esize, 2), dtype=np.int32)
+# for i in range(esize):
+#     env[i,:] = np.random.randint(sz - vsize//2 - 2*bsize, size=2)
+
+# symmetric environment choice
+env = np.array([[-1,-1], [-1,1], [1,-1], [1,1]]) * bsize
+
 
 # build joint distribution #
 ############################
@@ -51,7 +56,7 @@ for sample in samples:
             for k in range(esize):
                 esamp = np.mod(np.array((r,c)) + env[k,:],sz)
                 table[idx,-(k+1)] = sample[esamp[0], esamp[1]]
-                
+
             idx += 1
 
 
@@ -88,4 +93,5 @@ thist /= tsize
 
 dib = DIB(thist, beta=5, hiddens=100)
 dib.compress()
-dib.report()
+dib.report_clusters()
+dib.visualize_clusters()
