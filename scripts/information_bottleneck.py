@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from itertools import combinations
 
 class DIB:
     eps = 1e-12
@@ -23,27 +24,47 @@ class DIB:
         x = np.eye(hiddens)
         self.qt_x = x[:,np.random.randint(self.hiddens, size=self.xsz)]
         self.f = np.argmax(self.qt_x, axis=0)
+        self.l = np.zeros((self.xsz, hiddens))
 
+        self.cost = 0     # effectively infinity
 
     def compress(self, epsilon=1e-4):
         self._update()
 
-        cost_prev = 1e6
-        cost = 1e5
+        prev_cost = 1e6
 
         idx = 0
 
-        while (cost_prev - cost) > epsilon:
-            print("Iteration %d: %.2f" % (idx, cost))
-            cost_prev = cost
-            cost = self._step()
+        while abs(self.cost - prev_cost) > epsilon:
+            print("Iteration %d: %.2f" % (idx, self.cost))
+            prev_cost = self.cost
+            self._step()
             self._update()
 
             idx += 1
 
         self._cleanup()
 
+        return self.cost
+
 # core DIB helper functions #
+    def _step(self):
+        """
+        updates cluster assignments by maximizing DIB objective
+        """
+        self.qt_x = self.l.T     # not correct, but should work for DIB scheme
+
+        f = np.argmax(self.qt_x, axis=0)
+
+        # try to merge clusters
+        for a, b in combinations(range(self.hiddens), 2):
+            ftest = np.where(f==a, b, f)
+            cost = self._calculate_cost(ftest)
+
+            if cost > self.cost:
+                f = ftest
+
+        self.f = f
 
     def _update(self):
         """
@@ -60,10 +81,6 @@ class DIB:
             t = self.f[x]
             self.qy_t[:,t] += divide(self.pxy[x,:], self.qt[t])
 
-    def _step(self):
-        """
-        updates cluster assignments by maximizing DIB objective
-        """
         d = np.zeros((self.xsz, self.hiddens))
         for x in range(self.xsz):   # can this be simplified?
             for t in range(self.hiddens):
@@ -72,18 +89,18 @@ class DIB:
                             np.log(self.py_x[y,x] + DIB.eps) - \
                             np.log(self.qy_t[y,t] + DIB.eps))
 
-        l = np.log(self.qt + DIB.eps) - self.beta * d
-        #l = -d
+        self.l = np.log(self.qt + DIB.eps) - self.beta * d
 
-        self.qt_x = l.T     # not correct, but should work for DIB scheme
+        self.cost = self._calculate_cost(self.f)
 
-        # try to merge clusters
-
-
+    def _calculate_cost(self, f):
+        """
+        calculate the cost of a proposed clustering
+        """
         cost = 0
         for x in range(self.xsz):
-            t = self.f[x]
-            cost += l[x,t]
+            t = f[x]
+            cost += self.l[x,t]
 
         return cost
 
@@ -147,8 +164,6 @@ class DIB:
         - this could probably be more efficient
         """
         return np.array([(x//2**k) % 2 == 1 for k in range(sz)])
-
-
 
 
 # helpful functions #
