@@ -1,14 +1,16 @@
-import numpy as np
 import pickle
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class IsingIterator:
     """
     iterator for Ising batch files
     """
+
     def __init__(self, dfile, img_size=25):
-        with open (dfile, 'rb') as fo:
+        with open(dfile, 'rb') as fo:
             self.data = np.loadtxt(fo, dtype=np.int32)
 
         self.nsamp = self.data.shape[0]
@@ -26,7 +28,7 @@ class IsingIterator:
         if self.idx >= self.nsamp:
             raise StopIteration
 
-        item = self.data[self.idx,:]
+        item = self.data[self.idx, :]
         item = item.reshape(self.imgshape)
 
         return item

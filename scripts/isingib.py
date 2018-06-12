@@ -1,10 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from information_bottleneck import *
 from ising_iterator import *
 
-## parameters ##
-################
+# parameters #
+##############
 
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50.txt'
 sz = 25     # size of the samples (sq)
@@ -16,11 +16,13 @@ tsize = 1000000   # table size
 
 # load data #
 #############
+
+
 def calculate_joint():
     samples = IsingIterator(dfile)
 
     # choose environment #
-    env = np.array([[-1,-1], [-1,1], [1,-1], [1,1]]) * bsize
+    env = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]) * bsize
     # env = np.array([[0,-1], [0,1], [1,0], [-1,0]]) * bsize
 
     # build joint distribution #
@@ -29,7 +31,7 @@ def calculate_joint():
 
     for sample in samples:
 
-        sample = sample.reshape(sz,sz)
+        sample = sample.reshape(sz, sz)
 
         for r in range(1, sz, stride):
             for c in range(1, sz, stride):
@@ -44,10 +46,11 @@ def calculate_joint():
                 if rl > ru or cl > cu:  # hacky fix to wraparound
                     continue
 
-                table[idx,0:vsize*vsize] = np.reshape(sample[rl:ru,cl:cu],-1)
+                table[idx, 0:vsize *
+                      vsize] = np.reshape(sample[rl:ru, cl:cu], -1)
                 for k in range(esize):
-                    esamp = np.mod(np.array((r,c)) + env[k,:],sz)
-                    table[idx,-(k+1)] = sample[esamp[0], esamp[1]]
+                    esamp = np.mod(np.array((r, c)) + env[k, :], sz)
+                    table[idx, -(k+1)] = sample[esamp[0], esamp[1]]
 
                 idx += 1
     table2 = np.apply_along_axis(row2bin, 1, table)
@@ -55,8 +58,8 @@ def calculate_joint():
     # compute histogram
     thist = np.zeros((2**(vsize*vsize), 2**(esize)))
 
-    for r,c in table2:
-        thist[r,c] += 1
+    for r, c in table2:
+        thist[r, c] += 1
 
     thist /= tsize
 
@@ -66,13 +69,13 @@ def calculate_joint():
 def row2bin(x):
     a = 0
     b = 0
-    for i,j in enumerate(x):
+    for i, j in enumerate(x):
         j = 1 if j == 1 else 0
 
         if i < vsize*vsize:
-            a += j<<i
+            a += j << i
         else:
-            b += j<<(i-vsize*vsize)
+            b += j << (i-vsize*vsize)
     return np.array([a, b])
 
 
@@ -80,11 +83,11 @@ def row2bin(x):
 ####################################
 
 try:
-    joint_file = open('ising_ib_joint.npy','rb')
+    joint_file = open('ising_ib_joint.npy', 'rb')
 except IOError:
     print("Computing new joint distribution")
     thist = calculate_joint()
-    joint_file = open('ising_ib_joint.npy','wb')
+    joint_file = open('ising_ib_joint.npy', 'wb')
     np.save(joint_file, thist)
 else:
     print("Loading saved joint distribution")
@@ -105,4 +108,3 @@ if cost > mincost:
 
 dib.report_clusters()
 dib.visualize_clusters()
-
