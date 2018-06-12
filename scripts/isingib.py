@@ -20,17 +20,12 @@ force_recalculate = False   # force recalculation of joint distributionkj
 def calculate_joint():
     samples = IsingIterator(dfile)
 
-    # randomly choose environment #
-    # #############################
-
-    # env = np.empty((esize, 2), dtype=np.int32)
-    # for i in range(esize):
-    #    env[i,:] = np.random.randint(sz - vsize//2 - 2*bsize, size=2)
+    # choose environment #
+    ######################
 
     # symmetric environment choice
     # env = np.array([[-1,-1], [-1,1], [1,-1], [1,1]]) * bsize
     env = np.array([[0,-1], [0,1], [1,0], [-1,0]]) * bsize
-
 
     # build joint distribution #
     ############################
@@ -63,7 +58,7 @@ def calculate_joint():
     table2 = np.apply_along_axis(row2bin, 1, table)
 
 
-    # lolhistogram
+    # histogram
     thist = np.zeros((2**(vsize*vsize), 2**(esize)))
 
     for r,c in table2:
@@ -104,13 +99,13 @@ else:
 # information bottleneck #
 ##########################
 dib = None
-mincost = 0
+mincost = -10000
 
-test_dib = DIB(thist, beta=10, hiddens=50)
+test_dib = DIB(thist, beta=1, hiddens=20)
 cost = test_dib.compress()
 test_dib.report_clusters()
-print(cost)
-if cost < mincost:
+if cost > mincost:
+    print("New best clustering found")
     mincost = cost
     dib = test_dib
 

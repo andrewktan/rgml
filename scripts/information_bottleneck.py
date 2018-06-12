@@ -5,30 +5,29 @@ from itertools import combinations
 class DIB:
     eps = 1e-12
 
-    def __init__(self, pxy, beta=5, hiddens=100):
+    def __init__(self, pxy, beta=5, hiddens=100, iterations=10):
         self.beta = beta
         self.hiddens = hiddens
+        self.iterations = iterations    # random initializations
 
         self.pxy = pxy  # joint distribution, 2D numpy array
         self.xsz, self.ysz = pxy.shape
 
+        # calculate marginals
         self.px = pxy.sum(axis=1)
         self.px = divide(self.px, self.px.sum())
+
+        self.py = pxy.sum(axis=0)
+        self.py = divide(self.py, self.py.sum())
+
 
         self.py_x = divide(pxy, self.px[:,np.newaxis])
         self.py_x = self.py_x.T
 
         self.beta = beta
 
-        # initialize clusters
-        x = np.eye(hiddens)
-        self.qt_x = x[:,np.random.randint(self.hiddens, size=self.xsz)]
-        self.f = np.argmax(self.qt_x, axis=0)
-        self.l = np.zeros((self.xsz, hiddens))
-
-        self.cost = 0     # effectively infinity
-
     def compress(self, epsilon=1e-4):
+        self._initialize_clusters()
         self._update()
 
         prev_cost = 1e6
@@ -39,6 +38,7 @@ class DIB:
             print("Iteration %d: %.2f" % (idx, self.cost))
             prev_cost = self.cost
             self._step()
+            self._try_merge()
             self._update()
 
             idx += 1
@@ -48,6 +48,18 @@ class DIB:
         return self.cost
 
 # core DIB helper functions #
+    def _initialize_clusters(self):
+        """
+        randomly intialize clusters
+        """
+        # initialize clusters
+        x = np.eye(self.hiddens)
+        self.qt_x = x[:,np.random.randint(self.hiddens, size=self.xsz)]
+        self.f = np.argmax(self.qt_x, axis=0)
+        self.l = np.zeros((self.xsz, self.hiddens))
+
+        self.cost = 0     # effectively infinity
+
     def _step(self):
         """
         updates cluster assignments by maximizing DIB objective
@@ -56,15 +68,30 @@ class DIB:
 
         f = np.argmax(self.qt_x, axis=0)
 
-        # try to merge clusters
-        for a, b in combinations(range(self.hiddens), 2):
-            ftest = np.where(f==a, b, f)
-            cost = self._calculate_cost(ftest)
-
-            if cost > self.cost:
-                f = ftest
-
         self.f = f
+
+    def _try_merge(self):
+        """
+        try to merge clusters
+        """
+        for a, b in combinations(range(self.hiddens), 2):
+            ftest = np.where(self.f==a, b, self.f)
+
+            qt = np.zeros(self.hiddens)
+            qy_t = np.zeros((self.ysz, self.hiddens))
+
+            for x in range(self.xsz):
+                t = ftest[x]
+                qt[t] += self.px[x]
+
+            for x in range(self.xsz):
+                t = ftest[x]
+                qy_t[:,t] += divide(self.pxy[x,:], self.qt[t])
+
+            cost = self._calculate_cost(qy_t, qt)
+
+            if cost < self.cost:
+                f = ftest
 
     def _update(self):
         """
@@ -91,16 +118,21 @@ class DIB:
 
         self.l = np.log(self.qt + DIB.eps) - self.beta * d
 
-        self.cost = self._calculate_cost(self.f)
+        self.cost = self._calculate_cost(self.qy_t, self.qt)
 
-    def _calculate_cost(self, f):
+    def _calculate_cost(self, qy_t, qt):
         """
-        calculate the cost of a proposed clustering
+        calculate the DIB cost function of a proposed clustering
         """
         cost = 0
-        for x in range(self.xsz):
-            t = f[x]
-            cost += self.l[x,t]
+        for t in range(self.hiddens):
+            cost -= qt[t] * np.log(qt[t] + DIB.eps)
+
+        for y in range(self.ysz):
+            for t in range(self.hiddens):
+                cost -= (qy_t[y,t] * qt[t]) * (\
+                        np.log(qy_t[y,t] + DIB.eps) - \
+                        np.log(self.py[y] + DIB.eps))
 
         return cost
 
