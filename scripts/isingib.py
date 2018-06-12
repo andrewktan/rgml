@@ -13,7 +13,6 @@ stride = 3
 bsize = 3   # size of buffer (sq)
 esize = 4   # environment size
 tsize = 1000000   # table size
-force_recalculate = False   # force recalculation of joint distributionkj
 
 # load data #
 #############
@@ -21,14 +20,10 @@ def calculate_joint():
     samples = IsingIterator(dfile)
 
     # choose environment #
-    ######################
-
-    # symmetric environment choice
-    # env = np.array([[-1,-1], [-1,1], [1,-1], [1,1]]) * bsize
-    env = np.array([[0,-1], [0,1], [1,0], [-1,0]]) * bsize
+    env = np.array([[-1,-1], [-1,1], [1,-1], [1,1]]) * bsize
+    # env = np.array([[0,-1], [0,1], [1,0], [-1,0]]) * bsize
 
     # build joint distribution #
-    ############################
     table = np.empty((tsize, vsize*vsize + esize))
     idx = 0
 
@@ -57,8 +52,7 @@ def calculate_joint():
                 idx += 1
     table2 = np.apply_along_axis(row2bin, 1, table)
 
-
-    # histogram
+    # compute histogram
     thist = np.zeros((2**(vsize*vsize), 2**(esize)))
 
     for r,c in table2:

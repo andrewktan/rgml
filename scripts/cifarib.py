@@ -6,7 +6,7 @@ from cifar_iterator import *
 ## parameters ##
 ################
 
-dfile = '/Users/andrew/Documents/rgml/information-bottleneck/cifar-10-batches-py/data_batch_1'
+dfile = '/Users/andrew/Documents/rgml/cifar-10_data/data_batch_1'
 sz = 32     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
 stride = 3
@@ -51,7 +51,7 @@ for sample in samples:
             for k in range(esize):
                 esamp = np.mod(np.array((r,c)) + env[k,:],sz)
                 table[idx,-(k+1)] = sample[esamp[0], esamp[1]]
-                
+
             idx += 1
 
 
@@ -72,7 +72,7 @@ table2 = np.apply_along_axis(row2bin, 1, table)
 #plt.matshow(table[0:20,:], cmap=plt.cm.gray)
 #plt.show()
 
-# lolhistogram
+# histogram
 thist = np.zeros((2**(vsize*vsize), 2**(esize)))
 
 for r,c in table2:
@@ -86,6 +86,7 @@ thist /= tsize
 # information bottleneck #
 ##########################
 
-dib = DIB(thist, beta=5, hiddens=100)
+dib = DIB(thist, beta=10, hiddens=50)
 dib.compress()
-dib.report()
+dib.report_clusters()
+dib.visualize_clusters()
