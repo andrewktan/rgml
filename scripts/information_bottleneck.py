@@ -141,10 +141,14 @@ class DIB:
         """
         cleanup and relabel unused clusters
         """
-        # relabel
+        # relabel clusters
         uniques = np.unique(self.f)
-        self.f = np.vectorize(
-            {v: i for i, v in enumerate(uniques)}.get)(self.f)
+        unique_map = {v: i for i, v in enumerate(uniques)}
+        self.f = np.vectorize(unique_map.get)(self.f)
+
+        # remove unused bins
+        self.qy_t = self.qy_t[:, np.sum(self.qy_t, axis=0) != 0]
+        self.qt = self.qt[self.qt != 0]
 
         self.hiddens = uniques.size
 
@@ -162,18 +166,24 @@ class DIB:
         """
         displays clusters
         """
-        qx_t = np.zeros((vsz*vsz, self.hiddens))  # hardcoded system size
+        qx_t = np.zeros((vsz*vsz, self.hiddens))
         finv = {x: set() for x in range(self.hiddens)}
+
+        self.finv = finv
 
         for idx, element in enumerate(self.f):
             finv[element].add(idx)
 
         print({t: np.mean([bin(x).count('1') for x in finv[t]]) for t in finv})
         for t in finv:
-            qx_t[:, t] = np.mean(
-                np.array([self._bin2row(x, vsz*vsz) for x in finv[t]]),
-                axis=0)
+            qx_t[:, t] = np.sum(
+                np.array([self._bin2row(x, vsz*vsz) * self.px[x]
+                          for x in finv[t]]), axis=0)
 
+        # normalize cluster averages
+        qx_t = qx_t / self.qt
+
+        # reshape and plot
         clusters = np.zeros((vsz, vsz*self.hiddens))
 
         for t in finv:
@@ -190,7 +200,15 @@ class DIB:
         returns mutual information between cluster assignments and environment
         I(H;E)
         """
-        pass
+        mi = 0
+
+        for y in range(self.ysz):
+            for t in range(self.hiddens):
+                mi += self.qy_t[y, t] * self.qt[t] * (
+                    np.log(self.qy_t[y, t] + DIB.eps) -
+                    np.log(self.py[y] + DIB.eps))
+
+        return mi
 
     def _bin2row(self, x, sz=9):
         """

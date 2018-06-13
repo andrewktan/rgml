@@ -107,4 +107,4 @@ if cost > mincost:
     dib = test_dib
 
 dib.report_clusters()
-dib.visualize_clusters()
+c = dib.visualize_clusters()
