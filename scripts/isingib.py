@@ -6,14 +6,15 @@ from ising_iterator import *
 # parameters #
 ##############
 
-perform_beta_sweep = True
-perform_demo = False
+perform_beta_sweep = False
+perform_demo = True
 
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50.txt'
+savefile = 'ising_ib_joint.npy'
 sz = 25     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
 stride = 3
-bsize = 3   # size of buffer (sq)
+bsize = 1   # size of buffer (sq)
 esize = 4   # environment size
 tsize = 1000000   # table size
 
@@ -25,8 +26,8 @@ def calculate_joint():
     samples = IsingIterator(dfile)
 
     # choose environment #
-    env = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]) * bsize
-    # env = np.array([[0,-1], [0,1], [1,0], [-1,0]]) * bsize
+    # env = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]) * bsize
+    env = np.array([[0, -1], [0, 1], [1, 0], [-1, 0]]) * bsize
 
     # build joint distribution #
     table = np.empty((tsize, vsize*vsize + esize))
@@ -86,11 +87,11 @@ def row2bin(x):
 ####################################
 
 try:
-    joint_file = open('ising_ib_joint.npy', 'rb')
+    joint_file = open(savefile, 'rb')
 except IOError:
     print("Computing new joint distribution")
     thist = calculate_joint()
-    joint_file = open('ising_ib_joint.npy', 'wb')
+    joint_file = open(savefile, 'wb')
     np.save(joint_file, thist)
 else:
     print("Loading saved joint distribution")
@@ -102,7 +103,8 @@ else:
 if perform_demo:
     dib = None
 
-    dib = DIB(thist, beta=4, hiddens=40)
+    dib = DIB(thist, beta=1, hiddens=50)
+    dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters()
 
@@ -110,16 +112,19 @@ if perform_demo:
 ##############
 
 if perform_beta_sweep:
-    betas = np.linspace(0, 10)
+    betas = np.linspace(0, 10, 21)
     info_y = np.zeros_like(betas)
     info_x = np.zeros_like(betas)
 
     for i, beta in enumerate(betas):
-        dib = DIB(thist, beta=beta, hiddens=40)
+        dib = DIB(thist, beta=beta, hiddens=10)
         dib.compress()
         dib.report_clusters()
         info_y[i] = dib.mi_relevant()
         info_x[i] = dib.mi_captured()
 
-    plt.plot(info_x, info_y)
+    plt.plot(info_x, info_y, 'ko')
+    plt.title('Information Plane Plot')
+    plt.xlabel('I(X;T)')
+    plt.ylabel('I(Y;T)')
     plt.show()

@@ -27,6 +27,8 @@ class DIB:
 
         self.beta = beta
 
+        np.random.seed(0)
+
     def compress(self, epsilon=1e-4):
         self._initialize_clusters()
         self._update()
@@ -114,10 +116,10 @@ class DIB:
             for t in range(self.hiddens):
                 for y in range(self.ysz):
                     d[x, t] += self.py_x[y, x] * (
-                        np.log(self.py_x[y, x] + DIB.eps) -
-                        np.log(self.qy_t[y, t] + DIB.eps))
+                        np.log2(self.py_x[y, x] + DIB.eps) -
+                        np.log2(self.qy_t[y, t] + DIB.eps))
 
-        self.l = np.log(self.qt + DIB.eps) - self.beta * d
+        self.l = np.log2(self.qt + DIB.eps) - self.beta * d
 
         self.cost = self._calculate_cost(self.qy_t, self.qt)
 
@@ -127,13 +129,13 @@ class DIB:
         """
         cost = 0
         for t in range(self.hiddens):
-            cost -= qt[t] * np.log(qt[t] + DIB.eps)
+            cost -= qt[t] * np.log2(qt[t] + DIB.eps)
 
         for y in range(self.ysz):
             for t in range(self.hiddens):
                 cost -= (qy_t[y, t] * qt[t]) * (
-                    np.log(qy_t[y, t] + DIB.eps) -
-                    np.log(self.py[y] + DIB.eps))
+                    np.log2(qy_t[y, t] + DIB.eps) -
+                    np.log2(self.py[y] + DIB.eps))
 
         return cost
 
@@ -205,8 +207,8 @@ class DIB:
         for y in range(self.ysz):
             for t in range(self.hiddens):
                 mi += self.qy_t[y, t] * self.qt[t] * (
-                    np.log(self.qy_t[y, t] + DIB.eps) -
-                    np.log(self.py[y] + DIB.eps))
+                    np.log2(self.qy_t[y, t] + DIB.eps) -
+                    np.log2(self.py[y] + DIB.eps))
 
         return mi
 
@@ -220,8 +222,8 @@ class DIB:
         for x in range(self.xsz):
             for t in range(self.hiddens):
                 mi += np.kron(self.f[x], t) * self.px[x] * (
-                    np.log(np.kron(self.f[x], t) + DIB.eps) -
-                    np.log(self.qt[t] + DIB.eps))
+                    np.log2(np.kron(self.f[x], t) + DIB.eps) -
+                    np.log2(self.qt[t] + DIB.eps))
 
         return mi
 
