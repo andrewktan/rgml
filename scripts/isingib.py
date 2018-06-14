@@ -6,6 +6,9 @@ from ising_iterator import *
 # parameters #
 ##############
 
+perform_beta_sweep = True
+perform_demo = False
+
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50.txt'
 sz = 25     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
@@ -93,18 +96,30 @@ else:
     print("Loading saved joint distribution")
     thist = np.load(joint_file)
 
-# information bottleneck #
-##########################
-dib = None
-mincost = -10000
+# information bottleneck test #
+###############################
 
-test_dib = DIB(thist, beta=1, hiddens=20)
-cost = test_dib.compress()
-test_dib.report_clusters()
-if cost > mincost:
-    print("New best clustering found")
-    mincost = cost
-    dib = test_dib
+if perform_demo:
+    dib = None
 
-dib.report_clusters()
-c = dib.visualize_clusters()
+    dib = DIB(thist, beta=4, hiddens=40)
+    dib.report_clusters()
+    c = dib.visualize_clusters()
+
+# beta sweep #
+##############
+
+if perform_beta_sweep:
+    betas = np.linspace(0, 10)
+    info_y = np.zeros_like(betas)
+    info_x = np.zeros_like(betas)
+
+    for i, beta in enumerate(betas):
+        dib = DIB(thist, beta=beta, hiddens=40)
+        dib.compress()
+        dib.report_clusters()
+        info_y[i] = dib.mi_relevant()
+        info_x[i] = dib.mi_captured()
+
+    plt.plot(info_x, info_y)
+    plt.show()

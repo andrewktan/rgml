@@ -55,8 +55,8 @@ class DIB:
         """
         # initialize clusters
         x = np.eye(self.hiddens)
-        self.qt_x = x[:, np.random.randint(self.hiddens, size=self.xsz)]
-        self.f = np.argmax(self.qt_x, axis=0)
+        qt_x = x[:, np.random.randint(self.hiddens, size=self.xsz)]
+        self.f = np.argmax(qt_x, axis=0)
         self.l = np.zeros((self.xsz, self.hiddens))
 
         self.cost = 0     # effectively infinity
@@ -65,9 +65,9 @@ class DIB:
         """
         updates cluster assignments by maximizing DIB objective
         """
-        self.qt_x = self.l.T     # not correct, but should work for DIB scheme
+        qt_x = self.l.T     # not correct, but should work for DIB scheme
 
-        f = np.argmax(self.qt_x, axis=0)
+        f = np.argmax(qt_x, axis=0)
 
         self.f = f
 
@@ -195,10 +195,10 @@ class DIB:
 
         return qx_t
 
-    def mutual_information(self):
+    def mi_relevant(self):
         """
         returns mutual information between cluster assignments and environment
-        I(H;E)
+        I(T;Y)
         """
         mi = 0
 
@@ -207,6 +207,21 @@ class DIB:
                 mi += self.qy_t[y, t] * self.qt[t] * (
                     np.log(self.qy_t[y, t] + DIB.eps) -
                     np.log(self.py[y] + DIB.eps))
+
+        return mi
+
+    def mi_captured(self):
+        """
+        returns mutual information between cluster assignments and environment
+        I(T;X)
+        """
+        mi = 0
+
+        for x in range(self.xsz):
+            for t in range(self.hiddens):
+                mi += np.kron(self.f[x], t) * self.px[x] * (
+                    np.log(np.kron(self.f[x], t) + DIB.eps) -
+                    np.log(self.qt[t] + DIB.eps))
 
         return mi
 
