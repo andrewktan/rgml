@@ -43,7 +43,6 @@ class DIB:
             self._step()
             self._try_merge()
             self._update()
-
             idx += 1
 
         self._cleanup()
@@ -221,8 +220,8 @@ class DIB:
 
         for x in range(self.xsz):
             for t in range(self.hiddens):
-                mi += np.kron(self.f[x], t) * self.px[x] * (
-                    np.log2(np.kron(self.f[x], t) + DIB.eps) -
+                mi += (self.f[x] == t) * self.px[x] * (
+                    np.log2((self.f[x] == t) + DIB.eps) -
                     np.log2(self.qt[t] + DIB.eps))
 
         return mi
