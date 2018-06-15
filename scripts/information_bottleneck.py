@@ -41,6 +41,7 @@ class DIB:
             print("Iteration %d: %.2f" % (idx, self.cost))
             prev_cost = self.cost
             self._step()
+            self._cleanup()
             self._try_merge()
             self._update()
             idx += 1
