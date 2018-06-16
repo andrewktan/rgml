@@ -17,7 +17,7 @@ pxy = np.abs(pxy + np.random.rand(*pxy.shape) * 0.1)
 
 pxy = pxy / np.sum(pxy)
 
-dib = DIB(pxy, beta=1, hiddens=2)
+dib = DIB(pxy, beta=10, hiddens=100)
 dib.compress()
 
-dib.report()
+dib.report_clusters()

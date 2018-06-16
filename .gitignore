@@ -1,5 +1,6 @@
 *.txt
 *.npy
 *.swp
+*.pkl
 *.pyc
 cifar-10_data
