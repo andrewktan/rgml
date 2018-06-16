@@ -164,7 +164,7 @@ class DIB:
               (np.unique(self.f).size, self.beta))
         return self.f
 
-    def visualize_clusters(self, vsz=3):
+    def visualize_clusters(self, vsz=3, debug=False):
         """
         displays clusters
         """
@@ -185,15 +185,20 @@ class DIB:
         # normalize cluster averages
         qx_t = qx_t / self.qt
 
+        # reorder clusters by probability
+        order = np.argsort(-self.qt)
+        qx_t = qx_t[:, order]
+
         # reshape and plot
-        clusters = np.zeros((vsz, vsz*self.hiddens))
+        if debug:
+            clusters = np.zeros((vsz, vsz*self.hiddens))
 
-        for t in finv:
-            clusters[:, t*vsz:(t+1)*vsz] = \
-                qx_t[:, t].reshape(vsz, vsz)
+            for t in finv:
+                clusters[:, t*vsz:(t+1)*vsz] = \
+                    qx_t[:, t].reshape(vsz, vsz)
 
-        plt.matshow(clusters, cmap=plt.cm.gray)
-        plt.show()
+            plt.matshow(clusters, cmap=plt.cm.gray)
+            plt.show()
 
         return qx_t
 
