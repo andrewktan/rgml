@@ -42,10 +42,10 @@ for ns in range(numsamples):
     sample = field.reshape((1, -1))
     label = np.array([beta])
 
-    with open('data_0_45.txt', 'ab') as datafile:
+    with open('data_0_45', 'ab') as datafile:
         np.savetxt(datafile, sample.astype(int), fmt='%i')
 
-#    with open('labels.txt','ab') as labelfile:
+#    with open('labels','ab') as labelfile:
 #        np.savetxt(labelfile, label)
 
     print(ns, '%.4f' % beta)
