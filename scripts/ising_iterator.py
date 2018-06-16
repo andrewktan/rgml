@@ -9,11 +9,11 @@ class IsingIterator:
     """
     iterator for Ising batch files
         dfile - path to .txt data file
-        cgt - list of coarsegraining maps
+        cgts - list of coarsegraining maps
         sz - system size
     """
 
-    def __init__(self, dfile, cgt=None, vsize=3, sz=25, debug=False):
+    def __init__(self, dfile, cgts=None, vsize=3, sz=81, debug=False):
         with open(dfile, 'rb') as fo:
             self.data = np.loadtxt(fo, dtype=np.int32)
 
@@ -27,11 +27,11 @@ class IsingIterator:
         self.idx = -1
         self.permutation = np.random.permutation(self.nsamp)
 
-        if cgt == None:
+        if cgts == None:
             self.layers = 0
         else:
-            self.layers = len(cgt)
-        self.cgt = cgt
+            self.layers = len(cgts)
+        self.cgts = cgts
 
     def __iter__(self):
         return self
@@ -76,12 +76,12 @@ class IsingIterator:
             j = 1 if j == 1 else 0
             a += j << i
 
-        return self.cgt[layer][a]
+        return self.cgts[layer][a]
 
 
 if __name__ == '__main__':
     dspath = '/Users/andrew/Documents/rgml/ising_data/'
-    dsname = 'data_0_50'
+    dsname = 'data_0_45'
     dfile = "%s%s.txt" % (dspath, dsname)
 
     model = LayeredCoarseGrain(dsname, dspath, 1, beta=1, debug=True)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     f = model.get_ib_object(0).f
 
-    it = IsingIterator(dfile, cgt=[f, f])
+    it = IsingIterator(dfile, cgts=[f, f])
 
     for idx, sample in enumerate(it):
         if idx > 5:

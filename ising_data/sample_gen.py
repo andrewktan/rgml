@@ -5,12 +5,12 @@ import numpy as np
 numsamples = 20000
 
 # sim parameters
-sz = 25
-beta = 0.50  # inv temperature
+sz = 81
+beta = 0.45  # inv temperature
 J = 1  # nearest neighbor coupling
 h = 0  # 0.1  # external field
 
-Z = sz*sz*50  # iterations
+Z = sz**3  # iterations
 
 # sample generating loop
 
@@ -42,7 +42,7 @@ for ns in range(numsamples):
     sample = field.reshape((1, -1))
     label = np.array([beta])
 
-    with open('data_0_50.txt', 'ab') as datafile:
+    with open('data_0_45.txt', 'ab') as datafile:
         np.savetxt(datafile, sample.astype(int), fmt='%i')
 
 #    with open('labels.txt','ab') as labelfile:

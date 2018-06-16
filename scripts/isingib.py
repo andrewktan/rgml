@@ -8,9 +8,10 @@ from layered_coarse_grain import *
 perform_demo = True
 perform_beta_sweep = False
 
-dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50.txt'
-savefile = 'ising_ib_joint_e2.npy'
-sz = 25     # size of the samples (sq)
+dspath = '/Users/andrew/Documents/rgml/ising_data/'
+dsname = 'data_0_45'
+savefile = 'ising_ib_joint_81.npy'
+sz = 81     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
 stride = 3
 bsize = 4   # size of buffer (sq)
@@ -19,9 +20,6 @@ tsize = 1000000   # table size
 
 # information bottleneck test #
 ###############################
-
-dspath = '/Users/andrew/Documents/rgml/ising_data/'
-dsname = 'data_0_50'
 
 if perform_demo:
     model = LayeredCoarseGrain(dsname, dspath, 1, beta=7, debug=True)

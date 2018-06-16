@@ -29,7 +29,7 @@ class DIB:
 
         np.random.seed(0)
 
-    def compress(self, epsilon=1e-4):
+    def compress(self, epsilon=1e-4, debug=False):
         self._initialize_clusters()
         self._update()
 
@@ -38,7 +38,9 @@ class DIB:
         idx = 0
 
         while abs(self.cost - prev_cost) > epsilon:
-            print("Iteration %d: %.2f" % (idx, self.cost))
+            if debug:
+                print("Iteration %d: %.2f" % (idx, self.cost))
+
             prev_cost = self.cost
             self._step()
             self._cleanup()
