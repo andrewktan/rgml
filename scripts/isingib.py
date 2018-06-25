@@ -1,20 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 from information_bottleneck import *
 from ising_iterator import *
 
 # parameters #
 ##############
 
-perform_beta_sweep = False
-perform_demo = True
+perform_beta_sweep = True
+perform_demo = False
 
-dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50.txt'
+dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50'
 savefile = 'ising_ib_joint.npy'
 sz = 25     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
 stride = 3
-bsize = 1   # size of buffer (sq)
+bsize = 2   # size of buffer (sq)
 esize = 4   # environment size
 tsize = 1000000   # table size
 
@@ -106,7 +107,7 @@ if perform_demo:
     dib = DIB(thist, beta=1, hiddens=50)
     dib.compress()
     dib.report_clusters()
-    c = dib.visualize_clusters()
+    c = dib.visualize_clusters(debug=True)
 
 # beta sweep #
 ##############
@@ -117,7 +118,7 @@ if perform_beta_sweep:
     info_x = np.zeros_like(betas)
 
     for i, beta in enumerate(betas):
-        dib = DIB(thist, beta=beta, hiddens=10)
+        dib = DIB(thist, beta=beta, hiddens=100)
         dib.compress()
         dib.report_clusters()
         info_y[i] = dib.mi_relevant()
