@@ -40,4 +40,4 @@ dydx9 = dydx9[dydx9 != 0]
 
 dslope5 = dydx5[1] - dydx5[0]
 dslope7 = dydx7[1] - dydx7[0]
-delope9 = dydx9[1] - dydx9[0]
+dslope9 = dydx9[1] - dydx9[0]
