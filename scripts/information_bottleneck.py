@@ -160,7 +160,7 @@ class DIB:
         """
         returns current cluster assignmetns
         """
-        print("Found %d clusters with beta = %.1f" %
+        print("Found %d clusters with beta = %.2f" %
               (np.unique(self.f).size, self.beta))
         return self.f
 

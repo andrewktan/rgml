@@ -27,8 +27,8 @@ def calculate_joint():
     samples = IsingIterator(dfile)
 
     # choose environment #
-    # env = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]) * bsize
-    env = np.array([[0, -1], [0, 1], [1, 0], [-1, 0]]) * bsize
+    env = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]) * bsize
+    # env = np.array([[0, -1], [0, 1], [1, 0], [-1, 0]]) * bsize
 
     # build joint distribution #
     table = np.empty((tsize, vsize*vsize + esize))
@@ -104,7 +104,7 @@ else:
 if perform_demo:
     dib = None
 
-    dib = DIB(thist, beta=1, hiddens=50)
+    dib = DIB(thist, beta=2.37999, hiddens=50)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
@@ -113,16 +113,25 @@ if perform_demo:
 ##############
 
 if perform_beta_sweep:
-    betas = np.linspace(0, 10, 21)
+    betas = np.arange(0, 6.05, 0.1)
     info_y = np.zeros_like(betas)
     info_x = np.zeros_like(betas)
+    clusters = {x: [] for x in range(1, 20)}
 
     for i, beta in enumerate(betas):
-        dib = DIB(thist, beta=beta, hiddens=100)
+        dib = DIB(thist, beta=beta, hiddens=50)
         dib.compress()
-        dib.report_clusters()
+        f = dib.report_clusters()
         info_y[i] = dib.mi_relevant()
         info_x[i] = dib.mi_captured()
+        clusters[np.unique(f).size].append(beta)
+
+    # calculate kink angles
+    angles = {k: np.pi/2 - np.arctan(np.min(v + [100])) -
+              np.arctan(1/np.max(v + [0]))
+              for k, v in clusters.items()}
+    angles = {k: v * 180/np.pi for k, v in angles.items()}
+    angles = {k: max(v, 0) for k, v in angles.items()}
 
     plt.plot(info_x, info_y, 'ko')
     plt.title('Information Plane Plot')
