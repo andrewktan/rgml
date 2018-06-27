@@ -2,6 +2,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from dataset_iterator import *
 from layered_coarse_grain import *
 
@@ -14,38 +15,31 @@ class IsingIterator(DatasetIterator):
         sz - system size
     """
 
-    def __init__(self, dfile, cgts=None, vsize=3, sz=81, debug=False):
+    def __init__(self, dfile, mb_size=1, vsz=3, debug=False):
         with open(dfile, 'rb') as fo:
-            self.data = np.loadtxt(fo, dtype=np.int32)
+            self.data = np.loadtxt(fo)
+            self.data = self.data > 0
+            self.data = self.data.astype(np.int32)
 
-        DatasetIterator.__init__(self, dfile, cgts, vsize, sz, debug)
+        DatasetIterator.__init__(self, dfile, mb_size, vsz, debug)
 
     def __next__(self):
-        self.idx += 1
-        if self.idx >= self.nsamp:
-            raise StopIteration
 
-        item = self.data[self.idx, :]
-        item = item.reshape(self.sz, self.sz)
-        item = self._coarsegrain(item)
+        indicies = np.random.randint(self.nsamp, size=self.mb_size)
 
-        return item
+        items = self.data[indicies, :]
+        items = items.reshape(self.mb_size, self.sz ** 2)
+
+        return items
 
 
 if __name__ == '__main__':
-    dspath = '/Users/andrew/Documents/rgml/ising_data/'
-    dsname = 'data_0_45'
+    dspath = '/Users/andrew/documents/rgml/ising_data/'
+    dsname = 'data_0_50'
     dfile = "%s%s" % (dspath, dsname)
 
-    model = LayeredCoarseGrain(dsname, dspath, 1, beta=1, debug=True)
-    model.run()
+    it = IsingIterator(dfile, mb_size=32)
+    samples = it.__next__()
 
-    f = model.get_ib_object(0).f
-
-    it = IsingIterator(dfile, cgts=[f, f])
-
-    for idx, sample in enumerate(it):
-        if idx > 5:
-            break
-        plt.matshow(sample, cmap=plt.cm.gray)
-        plt.show()
+    plt.imshow(np.reshape(samples[0, :], (25, 25)), cmap=plt.cm.gray)
+    plt.show()

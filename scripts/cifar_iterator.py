@@ -2,6 +2,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from dataset_iterator import *
 from layered_coarse_grain import *
 
@@ -11,33 +12,32 @@ class CIFARIterator(DatasetIterator):
     iterator for CIFAR-10 batch files
     """
 
-    def __init__(self, dfile, cgts=None, vsize=3, sz=32, num_channels=3,
-                 binarize=True, debug=False):
+    def __init__(self, dfile, mb_size=32, vsz=3, binarize=False, debug=False):
         with open(dfile, 'rb') as fo:
             self.batch_dict = pickle.load(fo, encoding='bytes')
             self.data = self.batch_dict[b'data']
 
-        DatasetIterator.__init__(self, dfile, cgts, vsize, sz, debug)
+            # combine RGB channels
+            self.sz = 32
+            self.nsamp = self.data.shape[0]
+            self.data = self.data.reshape((self.nsamp, 3, self.sz, self.sz))
+            self.data = np.mean(self.data, axis=1) / 255
+            self.data = self.data.reshape(self.nsamp, self.sz ** 2)
 
-        self.imgshape = (num_channels, sz, sz)
         self.binarize = binarize
 
+        if binarize:
+            self.data = self.data > 0
+            self.data = self.data.astype(np.int32)
+
+        DatasetIterator.__init__(self, dfile, mb_size, vsz, debug)
+
     def __next__(self):
-        self.idx += 1
-        if self.idx >= self.nsamp:
-            raise StopIteration
+        indicies = np.random.randint(self.nsamp, size=self.mb_size)
 
-        sample = self.data[self.idx, :]
-        sample = sample.reshape(self.imgshape)
-        sample = sample.transpose((1, 2, 0))
+        items = self.data[indicies, :]
 
-        if self.binarize:
-            sample = np.mean(sample, axis=2)
-            sample = np.where(sample > 255//2, 1, -1)
-
-        sample = self._coarsegrain(sample)
-
-        return sample
+        return items
 
 
 if __name__ == '__main__':
@@ -45,16 +45,8 @@ if __name__ == '__main__':
     dsname = 'data_batch_2'
     dfile = "%s%s" % (dspath, dsname)
 
-    model = LayeredCoarseGrain(
-        dsname, dspath, CIFARIterator, 1, sz=32, beta=30, debug=True)
-    model.run()
+    it = CIFARIterator(dfile, mb_size=32)
+    samples = it.__next__()
 
-    f = model.get_ib_object(0).f
-
-    it = CIFARIterator(dfile, cgts=[f])
-
-    for idx, sample in enumerate(it):
-        if idx > 5:
-            break
-        plt.matshow(sample, cmap=plt.cm.gray)
-        plt.show()
+    plt.imshow(np.reshape(samples[0, :], (32, 32)), cmap=plt.cm.gray)
+    plt.show()
