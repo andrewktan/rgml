@@ -1,3 +1,5 @@
+import pickle
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -7,31 +9,40 @@ from ising_iterator import *
 # parameters #
 ##############
 
-perform_beta_sweep = True
-perform_demo = False
+perform_beta_sweep = False
+perform_demo = True
 
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_50'
-savefile = 'ising_ib_joint.npy'
+savefile = 'ising_ib_table.pkl'
 sz = 25     # size of the samples (sq)
-vsize = 3   # size of visible block (sq)
+vsz = 3   # size of visible block (sq)
 stride = 3
-bsize = 2   # size of buffer (sq)
-esize = 4   # environment size
-tsize = 1000000   # table size
+bsz = 7   # size of buffer (sq)
+tsize = 10000   # table size
 
 # load data #
 #############
 
 
-def calculate_joint():
+def rotate_torus(A, r0, c0):
+    """
+    use period boundaries to circulate rows and columns
+        places specified (r0, c0) element at (0, 0) position
+    """
+    sr, sc = A.shape
+
+    ret = A.take(range(r0, r0+sr), mode='wrap', axis=0)
+    ret = ret.take(range(c0, c0+sc), mode='wrap', axis=0)
+
+    return ret
+
+
+def generate_samples():
     samples = IsingIterator(dfile)
 
-    # choose environment #
-    env = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]) * bsize
-    # env = np.array([[0, -1], [0, 1], [1, 0], [-1, 0]]) * bsize
-
     # build joint distribution #
-    table = np.empty((tsize, vsize*vsize + esize))
+    X = np.empty((tsize, vsz**2), dtype=np.int8)
+    Y = np.empty((tsize, sz**2 - bsz**2), dtype=np.int8)
     idx = 0
 
     for sample in samples:
@@ -43,45 +54,29 @@ def calculate_joint():
                 if idx >= tsize:
                     break
 
-                rl = np.mod(r - vsize//2, sz)
-                ru = np.mod(r + (vsize + 1)//2, sz)
-                cl = np.mod(c - vsize//2, sz)
-                cu = np.mod(c + (vsize + 1)//2, sz)
+                # calculate indices
+                vr = np.mod(r - vsz//2, sz)
+                vc = np.mod(c - vsz//2, sz)
+                br = np.mod(c - bsz//2, sz)
+                bc = np.mod(c - bsz//2, sz)
 
-                if rl > ru or cl > cu:  # hacky fix to wraparound
-                    continue
+                # capture visible patch
+                sample_rot = rotate_torus(sample, vr, vc)
 
-                table[idx, 0:vsize *
-                      vsize] = np.reshape(sample[rl:ru, cl:cu], -1)
-                for k in range(esize):
-                    esamp = np.mod(np.array((r, c)) + env[k, :], sz)
-                    table[idx, -(k+1)] = sample[esamp[0], esamp[1]]
+                X[idx, :] = np.reshape(sample_rot[0:vsz, 0:vsz], -1)
+
+                # capture environment
+                sample_rot = rotate_torus(sample, br, bc)
+                sample_rot[0:bsz, 0:bsz] = 0
+                sample_rot = np.reshape(sample_rot, -1)
+                Y[idx, :] = sample_rot[sample_rot != 0]
 
                 idx += 1
-    table2 = np.apply_along_axis(row2bin, 1, table)
 
-    # compute histogram
-    thist = np.zeros((2**(vsize*vsize), 2**(esize)))
+    X = X[0:idx, :]
+    Y = Y[0:idx, :]
 
-    for r, c in table2:
-        thist[r, c] += 1
-
-    thist /= tsize
-
-    return thist
-
-
-def row2bin(x):
-    a = 0
-    b = 0
-    for i, j in enumerate(x):
-        j = 1 if j == 1 else 0
-
-        if i < vsize*vsize:
-            a += j << i
-        else:
-            b += j << (i-vsize*vsize)
-    return np.array([a, b])
+    return X, Y
 
 
 # calculate and store if necessary #
@@ -91,12 +86,12 @@ try:
     joint_file = open(savefile, 'rb')
 except IOError:
     print("Computing new joint distribution")
-    thist = calculate_joint()
+    X, Y = generate_samples()
     joint_file = open(savefile, 'wb')
-    np.save(joint_file, thist)
+    pickle.dump([X, Y], joint_file)
 else:
     print("Loading saved joint distribution")
-    thist = np.load(joint_file)
+    X, Y = pickle.load(joint_file)
 
 # information bottleneck test #
 ###############################
@@ -104,7 +99,7 @@ else:
 if perform_demo:
     dib = None
 
-    dib = DIB(thist, beta=2.37999, hiddens=50)
+    dib = DIB(X, Y)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)

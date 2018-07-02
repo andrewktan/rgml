@@ -2,142 +2,99 @@ from itertools import combinations
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.special import digamma
 
 
 class DIB:
     eps = 1e-12
 
-    def __init__(self, pxy, beta=5, hiddens=100, iterations=10):
-        self.beta = beta
-        self.hiddens = hiddens
-        self.iterations = iterations    # random initializations
-
-        self.pxy = pxy  # joint distribution, 2D numpy array
-        self.xsz, self.ysz = pxy.shape
-
-        # calculate marginals
-        self.px = pxy.sum(axis=1)
-        self.px = divide(self.px, self.px.sum())
-
-        self.py = pxy.sum(axis=0)
-        self.py = divide(self.py, self.py.sum())
-
-        self.py_x = divide(pxy, self.px[:, np.newaxis])
-        self.py_x = self.py_x.T
-
+    def __init__(self, X, Y, beta=5):
         self.beta = beta
 
-        np.random.seed(0)
+        self.X = X
+        self.Y = Y
 
-    def compress(self, epsilon=1e-4):
-        self._initialize_clusters()
-        self._update()
+        self.X_uniques = np.vstack({tuple(x) for x in X})
+        self.clusters = len(self.X_uniques)
 
-        prev_cost = 1e6
+        # cluster assignments
+        self.f = {tuple(v): i for i, v in enumerate(self.X_uniques)}
 
-        idx = 0
-
-        while abs(self.cost - prev_cost) > epsilon:
-            print("Iteration %d: %.2f" % (idx, self.cost))
-            prev_cost = self.cost
-            self._step()
-            self._cleanup()
-            self._try_merge()
-            self._update()
-            idx += 1
-
-        self._cleanup()
-
-        return self.cost
+    def compress(self):
+        """
+        optimize DIB cost function
+        """
+        self._greedy_merge()
 
 # core DIB helper functions #
-    def _initialize_clusters(self):
+    def _greedy_merge(self):
         """
-        randomly intialize clusters
+        greedly merge two clusters
         """
-        # initialize clusters
-        x = np.eye(self.hiddens)
-        qt_x = x[:, np.random.randint(self.hiddens, size=self.xsz)]
-        self.f = np.argmax(qt_x, axis=0)
-        self.l = np.zeros((self.xsz, self.hiddens))
+        best_cost = 1e6
+        best_a, best_b = None, None
 
-        self.cost = 0     # effectively infinity
+        for a, b in combinations(range(self.clusters), 2):
+            print("trying %d %d" % (a, b))
+            print("best cost: %.3f" % best_cost)
+            a = tuple(self.X_uniques[a])
+            b = tuple(self.X_uniques[b])
 
-    def _step(self):
+            cost = self._dib_cost(a, b)
+            print("cost: %.3f" % cost)
+
+            if cost < best_cost:
+                best_cost = cost
+                best_a, best_b = a, b
+
+    def _dib_cost(self, a, b):
         """
-        updates cluster assignments by maximizing DIB objective
+        calculate DIB cost function
         """
-        qt_x = self.l.T     # not correct, but should work for DIB scheme
+        T = np.array([[self.f[tuple(k)] if tuple(k) !=
+                       a else self.f[b] for k in self.X]]).T
 
-        f = np.argmax(qt_x, axis=0)
-
-        self.f = f
-
-    def _try_merge(self):
-        """
-        try to merge clusters
-        """
-        for a, b in combinations(range(self.hiddens), 2):
-            ftest = np.where(self.f == a, b, self.f)
-
-            qt = np.zeros(self.hiddens)
-            qy_t = np.zeros((self.ysz, self.hiddens))
-
-            for x in range(self.xsz):
-                t = ftest[x]
-                qt[t] += self.px[x]
-
-            for x in range(self.xsz):
-                t = ftest[x]
-                qy_t[:, t] += divide(self.pxy[x, :], self.qt[t])
-
-            cost = self._calculate_cost(qy_t, qt)
-
-            if cost < self.cost:
-                f = ftest
-
-    def _update(self):
-        """
-        recalculates q(t) and q(t|x) for current cluster assignments
-        """
-        self.qt = np.zeros(self.hiddens)
-        self.qy_t = np.zeros((self.ysz, self.hiddens))
-
-        for x in range(self.xsz):
-            t = self.f[x]
-            self.qt[t] += self.px[x]
-
-        for x in range(self.xsz):
-            t = self.f[x]
-            self.qy_t[:, t] += divide(self.pxy[x, :], self.qt[t])
-
-        d = np.zeros((self.xsz, self.hiddens))
-        for x in range(self.xsz):   # can this be simplified?
-            for t in range(self.hiddens):
-                for y in range(self.ysz):
-                    d[x, t] += self.py_x[y, x] * (
-                        np.log2(self.py_x[y, x] + DIB.eps) -
-                        np.log2(self.qy_t[y, t] + DIB.eps))
-
-        self.l = np.log2(self.qt + DIB.eps) - self.beta * d
-
-        self.cost = self._calculate_cost(self.qy_t, self.qt)
-
-    def _calculate_cost(self, qy_t, qt):
-        """
-        calculate the DIB cost function of a proposed clustering
-        """
-        cost = 0
-        for t in range(self.hiddens):
-            cost -= qt[t] * np.log2(qt[t] + DIB.eps)
-
-        for y in range(self.ysz):
-            for t in range(self.hiddens):
-                cost -= (qy_t[y, t] * qt[t]) * (
-                    np.log2(qy_t[y, t] + DIB.eps) -
-                    np.log2(self.py[y] + DIB.eps))
+        cost = self._mi_estimator(self.X, self.Y)
+        cost -= self.beta * self._mi_estimator(self.X, T)
 
         return cost
+
+    def _x_norm(self, X):
+        """
+        norm on visible patch space
+        """
+        return np.linalg.norm(X, ord=1, axis=-1)
+
+    def _y_norm(self, Y):
+        """
+        metric on environment space
+        """
+        return np.linalg.norm(Y, ord=1, axis=-1)
+
+    def _mi_estimator(self, X, Y, k=5):
+        """
+        first estimator for mutual information described by Kraskov et al. (2008)
+        """
+        N = X.shape[0]
+
+        # calculate estimator
+        I = digamma(k) + digamma(N)
+
+        for n, i in enumerate(np.random.randint(N, size=100)):  # fix the O(N^2) here
+            dX = self._x_norm(X-X[i, :])
+            dY = self._y_norm(Y-Y[i, :])
+
+            dZ = np.array([dX, dY])
+            dZ = np.max(dZ, axis=0)
+            dZ = np.sort(dZ)[k]
+
+            tx = dZ - dX
+            I -= digamma(np.sum(tx > 0)+1) / 100
+
+            ty = dZ - dX
+            I -= digamma(np.sum(ty > 0)+1) / 100
+
+        return I
 
     def _cleanup(self):
         """
@@ -194,8 +151,7 @@ class DIB:
             clusters = np.zeros((vsz, vsz*self.hiddens))
 
             for t in finv:
-                clusters[:, t*vsz:(t+1)*vsz] = \
-                    qx_t[:, t].reshape(vsz, vsz)
+                clusters[:, t*vsz:(t+1)*vsz] = qx_t[:, t].reshape(vsz, vsz)
 
             plt.matshow(clusters, cmap=plt.cm.gray)
             plt.show()
