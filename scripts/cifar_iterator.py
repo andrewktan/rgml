@@ -32,13 +32,6 @@ class CIFARIterator(DatasetIterator):
 
         DatasetIterator.__init__(self, dfile, mb_size, vsz, debug)
 
-    def __next__(self):
-        indicies = np.random.randint(self.nsamp, size=self.mb_size)
-
-        items = self.data[indicies, :]
-
-        return items
-
 
 if __name__ == '__main__':
     dspath = '/Users/andrew/Documents/rgml/cifar-10_data/'

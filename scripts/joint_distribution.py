@@ -10,7 +10,7 @@ import torch.nn.functional as nn
 import torch.optim as optim
 from torch.autograd import Variable
 
-from ising_iterator import *
+from mnist_iterator import *
 
 
 class JointDistribution:
@@ -96,14 +96,20 @@ class JointDistribution:
         return table
 
 
-if False:
+if __name__ == '__main__':
     mb_size = 32
-    Z_dim = 100 * 2
+    Z_dim = 100
     h_dim = 128
     c = 0
     lr = 1e-3
 
     if True:
+        dspath = '/Users/andrew/documents/rgml/mnist_data/'
+        dsname = 'train-images-idx3-ubyte.gz'
+        dfile = "%s%s" % (dspath, dsname)
+        dset = MNISTIterator(dfile, mb_size=mb_size)
+
+    if False:
         dspath = '/Users/andrew/Documents/rgml/cifar-10_data/'
         dsname = 'data_batch_2'
         dfile = "%s%s" % (dspath, dsname)
@@ -189,7 +195,7 @@ if False:
         for p in params:
             if p.grad is not None:
                 data = p.grad.data
-                p.grad = Variable(data.new().resz_as_(data).zero_())
+                p.grad = Variable(data.new().resize_as_(data).zero_())
 
         # Print and plot every now and then
         if it % 1000 == 0:

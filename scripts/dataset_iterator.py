@@ -1,5 +1,3 @@
-import pickle
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -17,3 +15,12 @@ class DatasetIterator:
 
     def __iter__(self):
         return self
+
+    def __next__(self):
+
+        indicies = np.random.randint(self.nsamp, size=self.mb_size)
+
+        items = self.data[indicies, :]
+        items = items.reshape(self.mb_size, self.sz ** 2)
+
+        return items
