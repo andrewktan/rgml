@@ -147,13 +147,16 @@ def evaluate(epoch, debug=False):
         idx = np.random.randint(imgs.shape[0], size=5)
         img = np.reshape(imgs[idx, :], (28*5, 28))
         pimg = np.reshape(prediction[idx, :], (28*5, 28))
+
+        plt.figure()
         plt.matshow(np.concatenate((img, pimg), axis=1),
                     cmap=plt.cm.gray)
-        plt.show()
-
-        ax = plt.subplot(111, aspect='equal')
+        plt.savefig('out/images_%02d.png' % (epoch // 10), bbox_inches='tight')
 
         # ghet PCA
+        plt.figure()
+        ax = plt.subplot(111, aspect='equal')
+
         cmap = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
         var = np.argsort(-np.var(latent, axis=0))
         for label in range(10):     # plot 1-std contour
@@ -174,7 +177,7 @@ def evaluate(epoch, debug=False):
         # plt.scatter(latent[:, 0], latent[:, 1], s=1, c=labels)
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
-        plt.show()
+        plt.savefig('out/latent_%02d.png' % (epoch // 10), bbox_inches='tight')
 
     return loss
 
