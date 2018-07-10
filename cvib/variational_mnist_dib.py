@@ -4,21 +4,21 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from matplotlib.patches import Ellipse
 from tensorflow.examples.tutorials.mnist import input_data
 
 # parameters #
 ##############
 
-beta = 1e-4     # Lagrange multiplier
+beta = 1e-6     # Lagrange multiplier
 
 vsz2 = 5        # visible square size
 bsz2 = 7        # buffer square size
-hsz = 10         # hiddens linear size
+hsz = 50         # hiddens linear size
 
 vsz = vsz2**2  # visible linear size
 # esz = 784 - bsz2**2  # environment linear size
 esz = 784
+
 # models #
 ##########
 sess = tf.InteractiveSession()
@@ -35,14 +35,13 @@ ds = tf.contrib.distributions
 def encoder(vis):
     net = layers.relu(2*vis-1, 1024)
     net = layers.relu(net, 1024)
-    params = layers.linear(net, hsz*2)
-    mu, rho = params[:, :hsz], params[:, hsz:]
-    encoding = ds.NormalWithSoftplusScale(mu, rho - 5.0)
+    net = layers.linear(net, hsz)
+    encoding = tf.nn.softmax(net)
     return encoding
 
 
-def decoder(encoding_sample):
-    net = layers.linear(encoding_sample, 1024)
+def decoder(encoding):
+    net = layers.linear(encoding, 1024)
     net = layers.relu(net, 1024)
     net = layers.fully_connected(net, esz, activation_fn=tf.nn.sigmoid)
     return net
@@ -56,20 +55,16 @@ with tf.variable_scope('encoder'):
     encoding = encoder(vis)
 
 with tf.variable_scope('decoder'):
-    lat = encoding.mean()
-    penv = decoder(encoding.sample())   # predicted environment
+    penv = decoder(encoding)   # predicted environment
 
 # class_loss = tf.losses.softmax_cross_entropy(
 #    logits=logits, onehot_labels=one_hot_labels) / math.log(2)
 
-# pred_loss = tf.losses.mean_squared_error(
-    # penv, env) / math.log(2)
-
 pred_loss = tf.reduce_mean(tf.reduce_mean(
     tf.nn.sigmoid_cross_entropy_with_logits(logits=2*env-1, labels=penv), 0))
 
-info_loss = tf.reduce_sum(tf.reduce_mean(
-    ds.kl_divergence(encoding, prior), 0)) / math.log(2)
+
+info_loss = 0
 
 total_loss = pred_loss + beta * info_loss
 
@@ -82,7 +77,7 @@ global_step = tf.train.get_or_create_global_step()
 # learning_rate = tf.train.exponential_decay(1e-4, global_step,
 # decay_steps=2*steps_per_batch,
 # decay_rate=0.97, staircase=True)
-learning_rate = 1e-4
+learning_rate = 1e-2
 opt = tf.train.AdamOptimizer(learning_rate, 0.51)
 
 ma = tf.train.ExponentialMovingAverage(0.999, zero_debias=True)
@@ -127,21 +122,12 @@ def build_prior():
     vis_data, _ = separate_image(imgs)
 
 
-def eigsorted(cov):
-    vals, vecs = np.linalg.eigh(cov)
-    order = vals.argsort()[::-1]
-    return vals[order], vecs[:, order]
-
-
 def evaluate(epoch, debug=False):
-    """
-    code to evaluate and visualize model
-    """
     imgs = mnist_data.test.images
     labels = mnist_data.test.labels
     vis_data, env_data = separate_image(imgs)
-    loss, prediction, latent = sess.run([pred_loss, penv, lat],
-                                        feed_dict={vis: vis_data, env: env_data})
+    loss, prediction = sess.run([pred_loss, penv],
+                                feed_dict={vis: vis_data, env: env_data})
 
     if epoch % 10 == 0 and debug:
         idx = np.random.randint(imgs.shape[0], size=5)
@@ -149,31 +135,6 @@ def evaluate(epoch, debug=False):
         pimg = np.reshape(prediction[idx, :], (28*5, 28))
         plt.matshow(np.concatenate((img, pimg), axis=1),
                     cmap=plt.cm.gray)
-        plt.show()
-
-        ax = plt.subplot(111, aspect='equal')
-
-        # ghet PCA
-        cmap = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
-        var = np.argsort(-np.var(latent, axis=0))
-        for label in range(10):     # plot 1-std contour
-
-            latent_x = latent[labels == label, var[0]]
-            latent_y = latent[labels == label, var[1]]
-            mean_x = np.mean(latent_x)
-            mean_y = np.mean(latent_y)
-            cov = np.cov(latent_x, latent_y)
-            vals, vecs = eigsorted(cov)
-            theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
-            w, h = 2 * np.sqrt(vals)
-            ell = Ellipse(xy=(mean_x, mean_y),
-                          width=w, height=h,
-                          angle=theta, color=cmap[label])
-            ell.set_facecolor('none')
-            ax.add_artist(ell)
-        # plt.scatter(latent[:, 0], latent[:, 1], s=1, c=labels)
-        ax.set_xlim(-5, 5)
-        ax.set_ylim(-5, 5)
         plt.show()
 
     return loss
