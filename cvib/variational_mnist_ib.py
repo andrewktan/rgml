@@ -1,6 +1,8 @@
 import math
 import sys
 
+import matplotlib as mpl
+# mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -21,8 +23,6 @@ vsz = vsz2**2  # visible linear size
 esz = 784
 # models #
 ##########
-sess = tf.InteractiveSession()
-
 mnist_data = input_data.read_data_sets("MNIST_data/")
 
 vis = tf.placeholder(tf.float32, [None, vsz], 'visible')
@@ -92,10 +92,10 @@ train_tensor = tf.contrib.training.create_train_op(total_loss, opt,
                                                    global_step,
                                                    update_ops=[ma_update])
 
-tf.global_variables_initializer().run()
-
 # train #
 #########
+
+rstart, cstart = (int(x) for x in sys.argv[1:])
 
 
 def separate_image(imgs):
@@ -107,7 +107,7 @@ def separate_image(imgs):
 
     for idx, img in enumerate(imgs):
         vis_data[idx, :] = np.reshape(
-            np.reshape(imgs[idx, :], (28, 28))[15:20, 15:20], -1)
+            np.reshape(imgs[idx, :], (28, 28))[rstart:rstart+5, cstart:cstart+5], -1)
 
         # env = np.reshape(imgs[idx, :], (28, 28))
         # env[8:15, 8:15] = -1
@@ -133,60 +133,68 @@ def eigsorted(cov):
     return vals[order], vecs[:, order]
 
 
-def evaluate(epoch, debug=False):
-    """
-    code to evaluate and visualize model
-    """
-    imgs = mnist_data.test.images
-    labels = mnist_data.test.labels
-    vis_data, env_data = separate_image(imgs)
-    loss, prediction, latent = sess.run([pred_loss, penv, lat],
-                                        feed_dict={vis: vis_data, env: env_data})
+saver = tf.train.Saver()
 
-    if epoch % 10 == 0 and debug:
-        idx = np.random.randint(imgs.shape[0], size=5)
-        img = np.reshape(imgs[idx, :], (28*5, 28))
-        pimg = np.reshape(prediction[idx, :], (28*5, 28))
+with tf.Session() as sess:
+    tf.global_variables_initializer().run()
 
-        plt.figure()
-        plt.matshow(np.concatenate((img, pimg), axis=1),
-                    cmap=plt.cm.gray)
-        plt.savefig('out/images_%02d.png' % (epoch // 10), bbox_inches='tight')
-
-        # ghet PCA
-        plt.figure()
-        ax = plt.subplot(111, aspect='equal')
-
-        cmap = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
-        var = np.argsort(-np.var(latent, axis=0))
-        for label in range(10):     # plot 1-std contour
-
-            latent_x = latent[labels == label, var[0]]
-            latent_y = latent[labels == label, var[1]]
-            mean_x = np.mean(latent_x)
-            mean_y = np.mean(latent_y)
-            cov = np.cov(latent_x, latent_y)
-            vals, vecs = eigsorted(cov)
-            theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
-            w, h = 2 * np.sqrt(vals)
-            ell = Ellipse(xy=(mean_x, mean_y),
-                          width=w, height=h,
-                          angle=theta, color=cmap[label])
-            ell.set_facecolor('none')
-            ax.add_artist(ell)
-        # plt.scatter(latent[:, 0], latent[:, 1], s=1, c=labels)
-        ax.set_xlim(-5, 5)
-        ax.set_ylim(-5, 5)
-        plt.savefig('out/latent_%02d.png' % (epoch // 10), bbox_inches='tight')
-
-    return loss
-
-
-for epoch in range(40):
-    for step in range(steps_per_batch):
-        imgs, _ = mnist_data.train.next_batch(batch_size)
+    def evaluate(epoch, debug=False):
+        """
+        code to evaluate and visualize model
+        """
+        imgs = mnist_data.test.images
+        labels = mnist_data.test.labels
         vis_data, env_data = separate_image(imgs)
+        loss, prediction, latent = sess.run([pred_loss, penv, lat],
+                                            feed_dict={vis: vis_data, env: env_data})
 
-        sess.run(train_tensor, feed_dict={vis: vis_data, env: env_data})
-    print("Epoch: %02d\tLoss:%.3f" % (epoch, evaluate(epoch, debug=True)))
-    sys.stdout.flush()
+        if epoch % 10 == 0 and debug:
+            idx = np.random.randint(imgs.shape[0], size=5)
+            img = np.reshape(imgs[idx, :], (28*5, 28))
+            pimg = np.reshape(prediction[idx, :], (28*5, 28))
+
+            plt.figure()
+            plt.matshow(np.concatenate((img, pimg), axis=1),
+                        cmap=plt.cm.gray)
+            plt.savefig('out/images_%02d_%02d_%02d.png' %
+                        (rstart, cstart, epoch // 10), bbox_inches='tight')
+
+            # ghet PCA
+            plt.figure()
+            ax = plt.subplot(111, aspect='equal')
+
+            cmap = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+            var = np.argsort(-np.var(latent, axis=0))
+            for label in range(10):     # plot 1-std contour
+
+                latent_x = latent[labels == label, var[0]]
+                latent_y = latent[labels == label, var[1]]
+                mean_x = np.mean(latent_x)
+                mean_y = np.mean(latent_y)
+                cov = np.cov(latent_x, latent_y)
+                vals, vecs = eigsorted(cov)
+                theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
+                w, h = 2 * np.sqrt(vals)
+                ell = Ellipse(xy=(mean_x, mean_y),
+                              width=w, height=h,
+                              angle=theta, color=cmap[label])
+                ell.set_facecolor('none')
+                ax.add_artist(ell)
+            # plt.scatter(latent[:, 0], latent[:, 1], s=1, c=labels)
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
+            plt.savefig('out/latent_%02d_%02d_%02d.png' %
+                        (rstart, cstart, epoch // 10), bbox_inches='tight')
+
+        return loss
+
+    for epoch in range(1):
+        for step in range(steps_per_batch):
+            imgs, _ = mnist_data.train.next_batch(batch_size)
+            vis_data, env_data = separate_image(imgs)
+
+            sess.run(train_tensor, feed_dict={vis: vis_data, env: env_data})
+        print("Epoch: %02d\tLoss:%.3f" % (epoch, evaluate(epoch, debug=True)))
+        sys.stdout.flush()
+
+    saver.save(sess, "store/model_%02d_%02d.cpkt" % (rstart, cstart))
