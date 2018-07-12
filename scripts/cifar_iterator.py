@@ -16,6 +16,7 @@ class CIFARIterator(DatasetIterator):
         with open(dfile, 'rb') as fo:
             self.batch_dict = pickle.load(fo, encoding='bytes')
             self.data = self.batch_dict[b'data']
+            self.labels = self.batch_dict[b'labels']
 
             # combine RGB channels
             self.sz = 32

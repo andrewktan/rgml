@@ -11,6 +11,11 @@ class DatasetIterator:
         self.sz = np.sqrt(self.data.shape[1]).astype(int)    # image dimension
         self.vsz = vsz      # size of visible patch
 
+        self.num_samples = self.data.shape[0]
+
+        if mb_size == -1:
+            mb_size = self.num_samples
+
         self.mb_size = mb_size  # mini batch size
 
     def __iter__(self):
@@ -23,4 +28,6 @@ class DatasetIterator:
         items = self.data[indicies, :]
         items = items.reshape(self.mb_size, self.sz ** 2)
 
-        return items
+        labels = self.labels[indices]
+
+        return items, labels
