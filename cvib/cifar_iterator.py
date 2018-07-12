@@ -11,11 +11,39 @@ class CIFARIterator(DatasetIterator):
     iterator for CIFAR-10 batch files
     """
 
-    def __init__(self, dfile, mb_size=32, vsz=3, grayscale=False, binarize=False, debug=False):
-        with open(dfile, 'rb') as fo:
-            self.batch_dict = pickle.load(fo, encoding='bytes')
-            self.data = self.batch_dict[b'data']
-            self.labels = np.array(self.batch_dict[b'labels'])
+    def __init__(self, dfile, mb_size=32, vsz=3, test=False, grayscale=False, binarize=False, debug=False):
+
+        # load all training files
+        self.data = np.array([])
+        self.labels = np.array([])
+
+        if test:
+            with open(dfile, 'rb') as fo:
+                self.batch_dict = pickle.load(fo, encoding='bytes')
+                self.data = self.batch_dict[b'data']
+                self.labels = np.array(
+                    self.batch_dict[b'labels']).reshape(-1, 1)
+        else:
+            for idx in range(1, 6):
+                if debug:
+                    print("Loading %s" % dfile % idx)
+                with open(dfile % idx, 'rb') as fo:
+                    self.batch_dict = pickle.load(fo, encoding='bytes')
+
+                    if self.data.size:
+                        self.data = np.vstack(
+                            (self.data, self.batch_dict[b'data']))
+                    else:
+                        self.data = self.batch_dict[b'data']
+
+                    if self.labels.size:
+                        self.labels = np.vstack(
+                            (self.labels,
+                             np.array(self.batch_dict[b'labels']).reshape(-1, 1))
+                        )
+                    else:
+                        self.labels = np.array(
+                            self.batch_dict[b'labels']).reshape(-1, 1)
 
         self.sz = 32
         self.grayscale = grayscale
@@ -57,7 +85,7 @@ class CIFARIterator(DatasetIterator):
 
 if __name__ == '__main__':
     dspath = '/Users/andrew/Documents/rgml/cifar-10_data/'
-    dsname = 'data_batch_2'
+    dsname = 'data_batch_%d'
     dfile = "%s%s" % (dspath, dsname)
 
     it = CIFARIterator(dfile, grayscale=True, mb_size=32)

@@ -25,12 +25,13 @@ esz = 1024
 # models #
 ##########
 dspath = '/Users/andrew/Documents/rgml/cifar-10_data/'
-dstrain = 'data_batch_2'
+dstrain = 'data_batch_%d'
 dstest = 'test_batch'
 
 cifar_train = CIFARIterator(dspath + dstrain, grayscale=True, mb_size=32)
 
-cifar_test = CIFARIterator(dspath + dstest, grayscale=True, mb_size=-1)
+cifar_test = CIFARIterator(dspath + dstest, test=True,
+                           grayscale=True, mb_size=-1)
 
 vis = tf.placeholder(tf.float32, [None, vsz], 'visible')
 env = tf.placeholder(tf.float32, [None, esz], 'environment')
@@ -42,22 +43,29 @@ ds = tf.contrib.distributions
 def encoder(vis):
     xavier_initializer = tf.contrib.layers.xavier_initializer()
 
-    layer1 = tf.layers.dense(inputs=vis,
-                             units=1024,
+    vis = tf.reshape(vis, [-1, 5, 5, 1])
+
+    conv1 = tf.layers.conv2d(inputs=vis,
+                             filters=1,
+                             kernel_size=3,
+                             strides=1,
+                             padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
 
-    layer2 = tf.layers.dense(inputs=layer1,
-                             units=2048,
+    conv2 = tf.layers.conv2d(inputs=conv1,
+                             filters=64,
+                             kernel_size=3,
+                             strides=1,
+                             padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
 
-    params = tf.layers.dense(inputs=layer1,
-                             units=hsz*2,
-                             kernel_initializer=xavier_initializer,
-                             activation=None)
+    flat = tf.contrib.layers.flatten(conv2)
 
-    mu, rho = params[:, :hsz], params[:, hsz:]
+    mu = tf.layers.dense(flat, units=hsz, name='z_mean')
+    rho = tf.layers.dense(flat, units=hsz, name='z_log_var')
+
     encoding = ds.NormalWithSoftplusScale(mu, rho)
     return encoding
 
@@ -203,7 +211,7 @@ with tf.Session() as sess:
 
         return loss
 
-    for epoch in range(11):
+    for epoch in range(51):
         for step in range(steps_per_batch):
             imgs, _ = cifar_train.next_batch()
             vis_data, env_data = separate_image(imgs)
