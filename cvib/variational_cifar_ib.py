@@ -15,9 +15,9 @@ from cifar_iterator import *
 
 beta = 0e-4     # Lagrange multiplier
 
-vsz2 = 5        # visible square size
+vsz2 = 32        # visible square size
 bsz2 = 7        # buffer square size
-hsz = 10         # hiddens linear size
+hsz = 100         # hiddens linear size
 
 vsz = vsz2**2  # visible linear size
 # esz = 1024 - bsz2**2  # environment linear size
@@ -43,25 +43,41 @@ ds = tf.contrib.distributions
 def encoder(vis):
     xavier_initializer = tf.contrib.layers.xavier_initializer()
 
-    vis = tf.reshape(vis, [-1, 5, 5, 1])
+    vis = tf.reshape(vis, [-1, vsz2, vsz2, 1])
 
     conv1 = tf.layers.conv2d(inputs=vis,
                              filters=1,
-                             kernel_size=3,
-                             strides=1,
+                             kernel_size=4,
+                             strides=2,
                              padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
 
     conv2 = tf.layers.conv2d(inputs=conv1,
-                             filters=64,
-                             kernel_size=3,
-                             strides=1,
+                             filters=1,
+                             kernel_size=4,
+                             strides=2,
                              padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
 
-    flat = tf.contrib.layers.flatten(conv2)
+    conv3 = tf.layers.conv2d(inputs=conv2,
+                             filters=1,
+                             kernel_size=4,
+                             strides=2,
+                             padding='same',
+                             kernel_initializer=xavier_initializer,
+                             activation=tf.nn.relu)
+
+    conv4 = tf.layers.conv2d(inputs=conv3,
+                             filters=1,
+                             kernel_size=4,
+                             strides=2,
+                             padding='same',
+                             kernel_initializer=xavier_initializer,
+                             activation=tf.nn.relu)
+
+    flat = tf.contrib.layers.flatten(conv4)
 
     mu = tf.layers.dense(flat, units=hsz, name='z_mean')
     rho = tf.layers.dense(flat, units=hsz, name='z_log_var')
@@ -84,6 +100,8 @@ def decoder(encoding_sample):
                                      kernel_initializer=xavier_initializer,
                                      activation=tf.nn.relu)
 
+    net = tf.layers.batch_normalization(net)
+
     net = tf.layers.conv2d_transpose(inputs=net,
                                      filters=64,
                                      kernel_size=4,
@@ -91,6 +109,8 @@ def decoder(encoding_sample):
                                      padding='same',
                                      kernel_initializer=xavier_initializer,
                                      activation=tf.nn.relu)
+
+    net = tf.layers.batch_normalization(net)
 
     net = tf.layers.conv2d_transpose(inputs=net,
                                      filters=1,
@@ -163,7 +183,7 @@ def separate_image(imgs):
 
     for idx, img in enumerate(imgs):
         vis_data[idx, :] = np.reshape(
-            np.reshape(imgs[idx, :], (32, 32))[rstart:rstart+5, cstart:cstart+5], -1)
+            np.reshape(imgs[idx, :], (32, 32))[rstart:rstart+vsz2, cstart:cstart+vsz2], -1)
 
         env_data[idx, :] = img[:]
 
