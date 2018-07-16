@@ -46,38 +46,34 @@ def encoder(vis):
     vis = tf.reshape(vis, [-1, vsz2, vsz2, 1])
 
     conv1 = tf.layers.conv2d(inputs=vis,
-                             filters=1,
+                             filters=3,
                              kernel_size=4,
                              strides=2,
                              padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
+
+    # conv1 = tf.layers.batch_normalization(conv1)
 
     conv2 = tf.layers.conv2d(inputs=conv1,
-                             filters=1,
+                             filters=64,
                              kernel_size=4,
                              strides=2,
                              padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
+
+    # conv2 = tf.layers.batch_normalization(conv2)
 
     conv3 = tf.layers.conv2d(inputs=conv2,
-                             filters=1,
+                             filters=64,
                              kernel_size=4,
                              strides=2,
                              padding='same',
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
 
-    conv4 = tf.layers.conv2d(inputs=conv3,
-                             filters=1,
-                             kernel_size=4,
-                             strides=2,
-                             padding='same',
-                             kernel_initializer=xavier_initializer,
-                             activation=tf.nn.relu)
-
-    flat = tf.contrib.layers.flatten(conv4)
+    flat = tf.contrib.layers.flatten(conv3)
 
     mu = tf.layers.dense(flat, units=hsz, name='z_mean')
     rho = tf.layers.dense(flat, units=hsz, name='z_log_var')
@@ -100,7 +96,7 @@ def decoder(encoding_sample):
                                      kernel_initializer=xavier_initializer,
                                      activation=tf.nn.relu)
 
-    net = tf.layers.batch_normalization(net)
+    # net = tf.layers.batch_normalization(net)
 
     net = tf.layers.conv2d_transpose(inputs=net,
                                      filters=64,
@@ -110,7 +106,7 @@ def decoder(encoding_sample):
                                      kernel_initializer=xavier_initializer,
                                      activation=tf.nn.relu)
 
-    net = tf.layers.batch_normalization(net)
+    # net = tf.layers.batch_normalization(net)
 
     net = tf.layers.conv2d_transpose(inputs=net,
                                      filters=1,
@@ -119,7 +115,10 @@ def decoder(encoding_sample):
                                      padding='same',
                                      kernel_initializer=xavier_initializer)
 
-    net = tf.nn.sigmoid(tf.reshape(net, [-1, esz]))
+    # net = tf.layers.batch_normalization(net)
+
+    # net = tf.nn.sigmoid(tf.reshape(net, [-1, esz]))
+    net = tf.reshape(net, [-1, esz])
 
     return net
 
@@ -134,6 +133,7 @@ with tf.variable_scope('encoder'):
 with tf.variable_scope('decoder'):
     lat = encoding.mean()
     penv = decoder(encoding.sample())   # predicted environment
+    penv_sigmoid = tf.nn.sigmoid(penv)
 
 # class_loss = tf.losses.softmax_cross_entropy(
 #    logits=logits, onehot_labels=one_hot_labels) / math.log(2)
@@ -142,7 +142,13 @@ with tf.variable_scope('decoder'):
     # penv, env) / math.log(2)
 
 pred_loss = tf.reduce_mean(tf.reduce_mean(
-    tf.nn.sigmoid_cross_entropy_with_logits(logits=2*env-1, labels=penv), 0))
+    tf.nn.sigmoid_cross_entropy_with_logits(logits=penv, labels=env), 0))
+
+# env_flat = tf.contrib.layers.flatten(env)
+# penv_flat = tf.contrib.layers.flatten(penv)
+
+# pred_loss = tf.reduce_mean(-tf.reduce_sum(env_flat * tf.log(1e-10 + penv_flat)
+# + (1-env_flat) * tf.log(1e-10 + 1 - penv_flat), 1))
 
 info_loss = tf.reduce_sum(tf.reduce_mean(
     ds.kl_divergence(encoding, prior), 0)) / math.log(2)
@@ -155,11 +161,11 @@ batch_size = 100
 steps_per_batch = int(cifar_train.num_samples / batch_size)
 
 global_step = tf.train.get_or_create_global_step()
-learning_rate = tf.train.exponential_decay(1e-4, global_step,
-                                           decay_steps=2*steps_per_batch,
-                                           decay_rate=0.97, staircase=True)
-# learning_rate = 1e-4
-opt = tf.train.AdamOptimizer(learning_rate, 0.51)
+# learning_rate = tf.train.exponential_decay(1e-4, global_step,
+# decay_steps = 2*steps_per_batch,
+# decay_rate = 0.97, staircase = True)
+learning_rate = 2e-4
+opt = tf.train.AdamOptimizer(learning_rate, 0.50)
 
 ma = tf.train.ExponentialMovingAverage(0.999, zero_debias=True)
 ma_update = ma.apply(tf.model_variables())
@@ -215,7 +221,7 @@ with tf.Session() as sess:
         """
         imgs, labels = cifar_test.next_batch()
         vis_data, env_data = separate_image(imgs)
-        loss, prediction, latent = sess.run([pred_loss, penv, lat],
+        loss, prediction, latent = sess.run([pred_loss, penv_sigmoid, lat],
                                             feed_dict={vis: vis_data, env: env_data})
 
         if epoch % 10 == 0 and debug:
@@ -224,6 +230,7 @@ with tf.Session() as sess:
             pimg = np.reshape(prediction[idx, :], (32*5, 32))
 
             plt.figure()
+
             plt.matshow(np.concatenate((img, pimg), axis=1),
                         cmap=plt.cm.gray)
             plt.savefig('out/images_%02d_%02d_%02d.png' %
