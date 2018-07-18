@@ -15,7 +15,7 @@ from cifar_iterator import *
 
 beta = 0e-4     # Lagrange multiplier
 
-vsz2 = 32        # visible square size
+vsz2 = 16        # visible square size
 bsz2 = 7        # buffer square size
 hsz = 100         # hiddens linear size
 
@@ -46,7 +46,7 @@ def encoder(vis):
     vis = tf.reshape(vis, [-1, vsz2, vsz2, 1])
 
     conv1 = tf.layers.conv2d(inputs=vis,
-                             filters=3,
+                             filters=32,
                              kernel_size=4,
                              strides=2,
                              padding='same',
@@ -63,17 +63,8 @@ def encoder(vis):
                              kernel_initializer=xavier_initializer,
                              activation=tf.nn.relu)
 
-    # conv2 = tf.layers.batch_normalization(conv2)
-
-    conv3 = tf.layers.conv2d(inputs=conv2,
-                             filters=64,
-                             kernel_size=4,
-                             strides=2,
-                             padding='same',
-                             kernel_initializer=xavier_initializer,
-                             activation=tf.nn.relu)
-
-    flat = tf.contrib.layers.flatten(conv3)
+    flat = tf.contrib.layers.flatten(conv2)
+    flat = tf.layers.dense(flat, units=8*8*64, activation=tf.nn.relu)
 
     mu = tf.layers.dense(flat, units=hsz, name='z_mean')
     rho = tf.layers.dense(flat, units=hsz, name='z_log_var')

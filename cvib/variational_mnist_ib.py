@@ -28,23 +28,22 @@ mnist_data = input_data.read_data_sets("MNIST_data/")
 vis = tf.placeholder(tf.float32, [None, vsz], 'visible')
 env = tf.placeholder(tf.float32, [None, esz], 'environment')
 
-layers = tf.contrib.layers
 ds = tf.contrib.distributions
 
 
 def encoder(vis):
-    net = layers.relu(2*vis-1, 1024)
-    net = layers.relu(net, 1024)
-    params = layers.linear(net, hsz*2)
+    net = tf.layers.dense(vis, units=1024, activation=tf.nn.relu)
+    net = tf.layers.dense(net, units=1024, activation=tf.nn.relu)
+    params = tf.layers.dense(net, units=hsz*2)
     mu, rho = params[:, :hsz], params[:, hsz:]
     encoding = ds.NormalWithSoftplusScale(mu, rho - 5.0)
     return encoding
 
 
 def decoder(encoding_sample):
-    net = layers.linear(encoding_sample, 1024)
-    net = layers.relu(net, 1024)
-    net = layers.fully_connected(net, esz, activation_fn=tf.nn.sigmoid)
+    net = tf.layers.dense(encoding_sample, units=1024)
+    net = tf.layers.dense(net, units=1024, activation=tf.nn.relu)
+    net = tf.layers.dense(net, units=esz)
     return net
 
 
@@ -58,6 +57,7 @@ with tf.variable_scope('encoder'):
 with tf.variable_scope('decoder'):
     lat = encoding.mean()
     penv = decoder(encoding.sample())   # predicted environment
+    penv_sigmoid = tf.nn.sigmoid(penv)
 
 # class_loss = tf.losses.softmax_cross_entropy(
 #    logits=logits, onehot_labels=one_hot_labels) / math.log(2)
@@ -66,7 +66,7 @@ with tf.variable_scope('decoder'):
     # penv, env) / math.log(2)
 
 pred_loss = tf.reduce_mean(tf.reduce_mean(
-    tf.nn.sigmoid_cross_entropy_with_logits(logits=2*env-1, labels=penv), 0))
+    tf.nn.sigmoid_cross_entropy_with_logits(logits=penv, labels=env), 0))
 
 info_loss = tf.reduce_sum(tf.reduce_mean(
     ds.kl_divergence(encoding, prior), 0)) / math.log(2)
@@ -145,7 +145,7 @@ with tf.Session() as sess:
         imgs = mnist_data.test.images
         labels = mnist_data.test.labels
         vis_data, env_data = separate_image(imgs)
-        loss, prediction, latent = sess.run([pred_loss, penv, lat],
+        loss, prediction, latent = sess.run([pred_loss, penv_sigmoid, lat],
                                             feed_dict={vis: vis_data, env: env_data})
 
         if epoch % 10 == 0 and debug:
@@ -159,36 +159,9 @@ with tf.Session() as sess:
             plt.savefig('out/images_%02d_%02d_%02d.png' %
                         (rstart, cstart, epoch // 10), bbox_inches='tight')
 
-            # ghet PCA
-            plt.figure()
-            ax = plt.subplot(111, aspect='equal')
-
-            cmap = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
-            var = np.argsort(-np.var(latent, axis=0))
-            for label in range(10):     # plot 1-std contour
-
-                latent_x = latent[labels == label, var[0]]
-                latent_y = latent[labels == label, var[1]]
-                mean_x = np.mean(latent_x)
-                mean_y = np.mean(latent_y)
-                cov = np.cov(latent_x, latent_y)
-                vals, vecs = eigsorted(cov)
-                theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
-                w, h = 2 * np.sqrt(vals)
-                ell = Ellipse(xy=(mean_x, mean_y),
-                              width=w, height=h,
-                              angle=theta, color=cmap[label])
-                ell.set_facecolor('none')
-                ax.add_artist(ell)
-            # plt.scatter(latent[:, 0], latent[:, 1], s=1, c=labels)
-            ax.set_xlim(-5, 5)
-            ax.set_ylim(-5, 5)
-            plt.savefig('out/latent_%02d_%02d_%02d.png' %
-                        (rstart, cstart, epoch // 10), bbox_inches='tight')
-
         return loss
 
-    for epoch in range(1):
+    for epoch in range(51):
         for step in range(steps_per_batch):
             imgs, _ = mnist_data.train.next_batch(batch_size)
             vis_data, env_data = separate_image(imgs)
