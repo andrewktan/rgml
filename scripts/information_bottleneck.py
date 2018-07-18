@@ -42,7 +42,6 @@ class DIB:
             prev_cost = self.cost
             self._step()
             self._cleanup()
-            self._try_merge()
             self._update()
             idx += 1
 
