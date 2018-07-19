@@ -132,7 +132,7 @@ class DIB:
 
         for y in range(self.ysz):
             for t in range(self.hiddens):
-                cost -= (qy_t[y, t] * qt[t]) * (
+                cost -= self.beta * (qy_t[y, t] * qt[t]) * (
                     np.log2(qy_t[y, t] + DIB.eps) -
                     np.log2(self.py[y] + DIB.eps))
 
