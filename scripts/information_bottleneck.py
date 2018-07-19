@@ -42,6 +42,8 @@ class DIB:
             prev_cost = self.cost
             self._step()
             self._cleanup()
+            self._try_merge()
+            self._cleanup()
             self._update()
             idx += 1
 
@@ -76,6 +78,8 @@ class DIB:
         """
         try to merge clusters
         """
+        f = self.f
+
         for a, b in combinations(range(self.hiddens), 2):
             ftest = np.where(self.f == a, b, self.f)
 
@@ -88,12 +92,14 @@ class DIB:
 
             for x in range(self.xsz):
                 t = ftest[x]
-                qy_t[:, t] += divide(self.pxy[x, :], self.qt[t])
+                qy_t[:, t] += divide(self.pxy[x, :], qt[t])
 
             cost = self._calculate_cost(qy_t, qt)
 
             if cost < self.cost:
                 f = ftest
+
+        self.f = f
 
     def _update(self):
         """

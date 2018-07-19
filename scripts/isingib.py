@@ -7,8 +7,8 @@ from ising_iterator import *
 # parameters #
 ##############
 
-perform_beta_sweep = True
-perform_demo = False
+perform_beta_sweep = False
+perform_demo = True
 
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_45'
 savefile = 'ising_ib_joint.npy'
@@ -88,7 +88,8 @@ else:
 ###############################
 
 if perform_demo:
-    dib = DIB(thist, beta=10, hiddens=50)
+    dib = DIB(thist, beta=15, hiddens=50)
+
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
@@ -97,7 +98,7 @@ if perform_demo:
 ##############
 
 if perform_beta_sweep:
-    betas = np.arange(0, 10, 0.5)
+    betas = np.arange(0, 30.1, 0.5)
     info_y = np.zeros_like(betas, dtype=np.float32)
     info_x = np.zeros_like(betas, dtype=np.float32)
     clusters = {x: [] for x in range(1, 100)}
