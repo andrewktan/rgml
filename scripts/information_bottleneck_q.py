@@ -19,6 +19,9 @@ class DIB:
         self.px = pxx.sum(axis=1)
         self.px = divide(self.px, self.px.sum())
 
+        self.pxp = pxx.sum(axis=0)  # not assuming symmetry here
+        self.pxp = divide(self.pxp, self.pxp.sum())
+
         self.beta = beta
 
         np.random.seed(0)
@@ -36,6 +39,7 @@ class DIB:
             prev_cost = self.cost
             self._step()
             self._cleanup()
+            self._update()
             self._try_merge()
             self._cleanup()
             self._update()
@@ -73,15 +77,22 @@ class DIB:
         try to merge clusters
         """
         f = self.f
+        min_cost = self.cost
 
         for a, b in combinations(range(self.hiddens), 2):
             ftest = np.where(self.f == a, b, self.f)
 
             qt = np.zeros(self.hiddens)
-            qy_t = np.zeros((self.ysz, self.hiddens))
+            qy = np.zeros(self.hiddens)
+            qy_t = np.zeros((self.hiddens, self.hiddens))
+
             for x in range(self.xsz):
                 t = ftest[x]
                 qt[t] += self.px[x]
+
+            for xp in range(self.xsz):
+                y = self.f[xp]
+                qy[y] += self.pxp[xp]
 
             for x in range(self.xsz):
                 for xp in range(self.xsz):
@@ -89,10 +100,12 @@ class DIB:
                     y = ftest[xp]
                     qy_t[y, t] += divide(self.pxx[x, xp], qt[t])
 
-            cost = self._calculate_cost(qy_t, qt)
+            cost = self._calculate_cost(qy_t, qt, qy)
 
-            if cost < self.cost:
+            if cost < min_cost:
+                min_cost = cost
                 f = ftest
+                print("new low found %.2f by merging %d and %d" % (cost, a, b))
 
         self.f = f
 
@@ -101,12 +114,17 @@ class DIB:
         recalculates q(t) and q(t|x) for current cluster assignments
         """
         self.qt = np.zeros(self.hiddens)
+        self.qy = np.zeros(self.hiddens)
         self.qy_t = np.zeros((self.hiddens, self.hiddens))
         self.qy_x = np.zeros((self.hiddens, self.xsz))
 
         for x in range(self.xsz):
             t = self.f[x]
             self.qt[t] += self.px[x]
+
+        for xp in range(self.xsz):
+            y = self.f[xp]
+            self.qy[y] += self.pxp[xp]
 
         for x in range(self.xsz):
             for xp in range(self.xsz):
@@ -118,16 +136,16 @@ class DIB:
         d = np.zeros((self.xsz, self.hiddens))
         for x in range(self.xsz):   # can this be simplified?
             for t in range(self.hiddens):
-                for y in range(self.ysz):
+                for y in range(self.hiddens):
                     d[x, t] += self.qy_x[y, x] * (
                         np.log2(self.qy_x[y, x] + DIB.eps) -
                         np.log2(self.qy_t[y, t] + DIB.eps))
 
         self.l = np.log2(self.qt + DIB.eps) - self.beta * d
 
-        self.cost = self._calculate_cost(self.qy_t, self.qt)
+        self.cost = self._calculate_cost(self.qy_t, self.qt, self.qy)
 
-    def _calculate_cost(self, qy_t, qt):
+    def _calculate_cost(self, qy_t, qt, qy):
         """
         calculate the DIB cost function of a proposed clustering
         """
@@ -135,11 +153,11 @@ class DIB:
         for t in range(self.hiddens):
             cost -= qt[t] * np.log2(qt[t] + DIB.eps)
 
-        for y in range(self.ysz):
+        for y in range(self.hiddens):
             for t in range(self.hiddens):
                 cost -= self.beta * (qy_t[y, t] * qt[t]) * (
                     np.log2(qy_t[y, t] + DIB.eps) -
-                    np.log2(self.py[y] + DIB.eps))
+                    np.log2(qy[y] + DIB.eps))
 
         return cost
 
@@ -213,11 +231,11 @@ class DIB:
         """
         mi = 0
 
-        for y in range(self.ysz):
+        for y in range(self.hiddens):
             for t in range(self.hiddens):
                 mi += self.qy_t[y, t] * self.qt[t] * (
                     np.log2(self.qy_t[y, t] + DIB.eps) -
-                    np.log2(self.py[y] + DIB.eps))
+                    np.log2(self.qy[y] + DIB.eps))
 
         return mi
 
