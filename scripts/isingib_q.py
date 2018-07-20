@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from information_bottleneck import *
+from information_bottleneck_q import *
 from ising_iterator import *
 
 # parameters #

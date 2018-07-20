@@ -16,7 +16,7 @@ class DIB:
         self.xsz = pxx.shape[0]
 
         # calculate marginals
-        self.px = pxy.sum(axis=1)
+        self.px = pxx.sum(axis=1)
         self.px = divide(self.px, self.px.sum())
 
         self.beta = beta
@@ -79,14 +79,15 @@ class DIB:
 
             qt = np.zeros(self.hiddens)
             qy_t = np.zeros((self.ysz, self.hiddens))
-
             for x in range(self.xsz):
                 t = ftest[x]
                 qt[t] += self.px[x]
 
             for x in range(self.xsz):
-                t = ftest[x]
-                qy_t[:, t] += divide(self.pxy[x, :], qt[t])
+                for xp in range(self.xsz):
+                    t = ftest[x]
+                    y = ftest[xp]
+                    qy_t[y, t] += divide(self.pxx[x, xp], qt[t])
 
             cost = self._calculate_cost(qy_t, qt)
 
