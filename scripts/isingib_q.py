@@ -7,8 +7,8 @@ from ising_iterator import *
 # parameters #
 ##############
 
-perform_beta_sweep = True
-perform_demo = False
+perform_beta_sweep = False
+perform_demo = True
 
 symmetrize = True
 
@@ -69,7 +69,7 @@ if symmetrize:
     thist = (thist + thist.T)/2
 
 if perform_demo:
-    dib = DIB(thist, beta=5, hiddens=50)
+    dib = DIB(thist, beta=40, hiddens=20)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
@@ -78,13 +78,14 @@ if perform_demo:
 ##############
 
 if perform_beta_sweep:
-    betas = np.arange(0, 30.1, 0.5)
+    betas = np.arange(0, 13, 0.5)
+    hiddens = 20
     info_y = np.zeros_like(betas, dtype=np.float32)
     info_x = np.zeros_like(betas, dtype=np.float32)
-    clusters = {x: [] for x in range(1, 100)}
+    clusters = {x: [] for x in range(1, hiddens)}
 
     for i, beta in enumerate(betas):
-        dib = DIB(thist, beta=beta, hiddens=100)
+        dib = DIB(thist, beta=beta, hiddens=hiddens)
         dib.compress()
         f = dib.report_clusters()
         info_y[i] = dib.mi_relevant()
