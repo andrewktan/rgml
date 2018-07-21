@@ -35,17 +35,19 @@ class DIB:
         idx = 0
 
         while abs(self.cost - prev_cost) > epsilon:
-            print("Iteration %d: %.2f" % (idx, self.cost))
             prev_cost = self.cost
             self._step()
             self._cleanup()
             self._update()
+            print("Iteration %d-BA:\tCost: %.4f\tClusters:%d"
+                  % (idx, self.cost, self.hiddens))
+
             self._try_merge()
             self._cleanup()
             self._update()
+            print("Iteration %d-CM:\tCost: %.4f\tClusters:%d"
+                  % (idx, self.cost, self.hiddens))
             idx += 1
-
-        self._cleanup()
 
         return self.cost
 
@@ -80,32 +82,32 @@ class DIB:
         min_cost = self.cost
 
         for a, b in combinations(range(self.hiddens), 2):
-            ftest = np.where(self.f == a, b, self.f)
 
-            qt = np.zeros(self.hiddens)
-            qy = np.zeros(self.hiddens)
-            qy_t = np.zeros((self.hiddens, self.hiddens))
+            qt = np.copy(self.qt)
+            qy = np.copy(self.qy)
+            qy_t = np.copy(self.qy_t)
 
-            for x in range(self.xsz):
-                t = ftest[x]
-                qt[t] += self.px[x]
+            # recalculate proposed qt
+            qt[a] += qt[b]
+            qt[b] = 0
 
-            for xp in range(self.xsz):
-                y = self.f[xp]
-                qy[y] += self.pxp[xp]
+            # recalculate proposed qy
+            qy[a] += qy[b]
+            qy[b] = 0
 
-            for x in range(self.xsz):
-                for xp in range(self.xsz):
-                    t = ftest[x]
-                    y = ftest[xp]
-                    qy_t[y, t] += divide(self.pxx[x, xp], qt[t])
+            # recalculate proposed qy_t
+            # qy_t[y, t] += divide(self.pxx[x, xp], qt[t])
+            qy_t[:, a] = (self.qt[a] * qy_t[:, a] + self.qt[b]
+                          * qy_t[:, b]) / (self.qt[a] + self.qt[b])
+            qy_t[:, b] = 0
+            qy_t[a, :] += qy_t[b, :]
+            qy_t[b, :] = 0
 
             cost = self._calculate_cost(qy_t, qt, qy)
 
             if cost < min_cost:
                 min_cost = cost
-                f = ftest
-                print("new low found %.2f by merging %d and %d" % (cost, a, b))
+                f = np.where(self.f == a, b, self.f)
 
         self.f = f
 
@@ -141,7 +143,7 @@ class DIB:
                         np.log2(self.qy_x[y, x] + DIB.eps) -
                         np.log2(self.qy_t[y, t] + DIB.eps))
 
-        self.l = np.log2(self.qt + DIB.eps) - self.beta * d
+        self.l = np.log2(self.qt + DIB.eps) - 2 * self.beta * d
 
         self.cost = self._calculate_cost(self.qy_t, self.qt, self.qy)
 

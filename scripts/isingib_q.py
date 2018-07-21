@@ -69,7 +69,7 @@ if symmetrize:
     thist = (thist + thist.T)/2
 
 if perform_demo:
-    dib = DIB(thist, beta=40, hiddens=30)
+    dib = DIB(thist, beta=40, hiddens=100)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
