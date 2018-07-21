@@ -13,11 +13,11 @@ perform_demo = True
 symmetrize = True
 
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_45'
-savefile = 'ising_ib_joint.npy'
-sz = 81     # sz of the samples (sq)
-vsz = 3   # sz of visible block (sq)
+savefile = 'isingib_q_joint.npy'
+sz = 81     # size of the samples (sq)
+vsz = 3   # size of visible block (sq)
 stride = 3
-tsz = 1000000   # table sz
+tsz = 1000000   # table size
 
 # load data #
 #############
@@ -69,7 +69,7 @@ if symmetrize:
     thist = (thist + thist.T)/2
 
 if perform_demo:
-    dib = DIB(thist, beta=40, hiddens=100)
+    dib = DIB(thist, beta=20, hiddens=50)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
@@ -105,7 +105,7 @@ if perform_beta_sweep:
     plt.ylabel('I(Y;T)')
     plt.show()
 
-    with open("ipdata_%02d.pkl" % (2*bsz+1), 'wb') as f:
+    with open("ipdata_%02d.pkl" % (2*edist+1), 'wb') as f:
         dump = {}
         dump['info_x'] = info_x
         dump['info_y'] = info_y

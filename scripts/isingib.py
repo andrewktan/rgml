@@ -11,13 +11,13 @@ perform_beta_sweep = False
 perform_demo = True
 
 dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_45'
-savefile = 'ising_ib_joint.npy'
+savefile = 'isingib_joint.npy'
 sz = 81     # size of the samples (sq)
-vsize = 3   # size of visible block (sq)
+vsz = 3   # size of visible block (sq)
 stride = 3
 edist = 3  # size of buffer (sq)
-esize = 4   # environment size
-tsize = 1000000   # table size
+esz = 4   # environment size
+tsz = 1000000   # table size
 
 # load data #
 #############
@@ -40,24 +40,24 @@ def calculate_joint():
     # env = np.array([[0, -1], [0, 1], [1, 0], [-1, 0]]) * edist
 
     # build joint distribution #
-    thist = np.zeros((2**(vsize*vsize), 2**(esize)))
+    thist = np.zeros((2**(vsz*vsz), 2**(esz)))
     idx = 0
 
-    for idx, sample in zip(range(tsize), samples):
+    for idx, sample in zip(range(tsz), samples):
         sample = sample.reshape(sz, sz)
 
         r, c = (sz//2, sz//2)   # sample from the middle
 
-        rl = r - vsize//2
-        ru = r + (vsize + 1)//2
-        cl = c - vsize//2
-        cu = c + (vsize + 1)//2
+        rl = r - vsz//2
+        ru = r + (vsz + 1)//2
+        cl = c - vsz//2
+        cu = c + (vsz + 1)//2
 
         vcode = to_code(np.reshape(sample[rl:ru, cl:cu], -1))
 
-        esamps = np.empty(esize)
+        esamps = np.empty(esz)
 
-        for k in range(esize):
+        for k in range(esz):
             esamp = np.array((r, c)) + env[k, :]
             esamps[k] = sample[esamp[0], esamp[1]]
 
@@ -65,7 +65,7 @@ def calculate_joint():
 
         thist[vcode, ecode] += 1
 
-    thist /= tsize
+    thist /= tsz
 
     return thist
 
@@ -88,7 +88,7 @@ else:
 ###############################
 
 if perform_demo:
-    dib = DIB(thist, beta=15, hiddens=50)
+    dib = DIB(thist, beta=20, hiddens=50)
 
     dib.compress()
     dib.report_clusters()

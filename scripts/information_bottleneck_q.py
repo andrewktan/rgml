@@ -82,7 +82,6 @@ class DIB:
         min_cost = self.cost
 
         for a, b in combinations(range(self.hiddens), 2):
-
             qt = np.copy(self.qt)
             qy = np.copy(self.qy)
             qy_t = np.copy(self.qy_t)
@@ -96,7 +95,6 @@ class DIB:
             qy[b] = 0
 
             # recalculate proposed qy_t
-            # qy_t[y, t] += divide(self.pxx[x, xp], qt[t])
             qy_t[:, a] = (self.qt[a] * qy_t[:, a] + self.qt[b]
                           * qy_t[:, b]) / (self.qt[a] + self.qt[b])
             qy_t[:, b] = 0
@@ -265,11 +263,6 @@ class DIB:
 
 
 # helpful functions #
-
-def debugshow(thing):
-    plt.matshow(thing, cmap=plt.cm.gray)
-    plt.show()
-
 
 def divide(a, b):
     """

@@ -38,16 +38,19 @@ class DIB:
         idx = 0
 
         while abs(self.cost - prev_cost) > epsilon:
-            print("Iteration %d: %.2f" % (idx, self.cost))
             prev_cost = self.cost
             self._step()
             self._cleanup()
+            self._update()
+            print("Iteration %d-BA:\tCost: %.4f\tClusters:%d"
+                  % (idx, self.cost, self.hiddens))
+
             self._try_merge()
             self._cleanup()
             self._update()
+            print("Iteration %d-CM:\tCost: %.4f\tClusters:%d"
+                  % (idx, self.cost, self.hiddens))
             idx += 1
-
-        self._cleanup()
 
         return self.cost
 
@@ -82,24 +85,23 @@ class DIB:
         min_cost = self.cost
 
         for a, b in combinations(range(self.hiddens), 2):
-            ftest = np.where(self.f == a, b, self.f)
+            qt = np.copy(self.qt)
+            qy_t = np.copy(self.qy_t)
 
-            qt = np.zeros(self.hiddens)
-            qy_t = np.zeros((self.ysz, self.hiddens))
+            # recalculate proposed qt
+            qt[a] += qt[b]
+            qt[b] = 0
 
-            for x in range(self.xsz):
-                t = ftest[x]
-                qt[t] += self.px[x]
-
-            for x in range(self.xsz):
-                t = ftest[x]
-                qy_t[:, t] += divide(self.pxy[x, :], qt[t])
+            # recalculate proposed qy_t
+            qy_t[:, a] = (self.qt[a] * qy_t[:, a] + self.qt[b]
+                          * qy_t[:, b]) / (self.qt[a] + self.qt[b])
+            qy_t[:, b] = 0
 
             cost = self._calculate_cost(qy_t, qt)
 
             if cost < min_cost:
                 min_cost = cost
-                f = ftest
+                f = np.where(self.f == a, b, self.f)
 
         self.f = f
 
@@ -248,11 +250,6 @@ class DIB:
 
 
 # helpful functions #
-
-def debugshow(thing):
-    plt.matshow(thing, cmap=plt.cm.gray)
-    plt.show()
-
 
 def divide(a, b):
     """
