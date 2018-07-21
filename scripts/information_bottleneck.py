@@ -79,6 +79,7 @@ class DIB:
         try to merge clusters
         """
         f = self.f
+        min_cost = self.cost
 
         for a, b in combinations(range(self.hiddens), 2):
             ftest = np.where(self.f == a, b, self.f)
@@ -96,7 +97,8 @@ class DIB:
 
             cost = self._calculate_cost(qy_t, qt)
 
-            if cost < self.cost:
+            if cost < min_cost:
+                min_cost = cost
                 f = ftest
 
         self.f = f
