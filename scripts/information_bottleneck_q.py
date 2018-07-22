@@ -11,6 +11,7 @@ class DIB:
         self.beta = beta
         self.hiddens = hiddens
         self.iterations = iterations    # random initializations
+        self.noise_limit = 1e-2     # controls sensitivity of _merge_noise step
 
         self.pxx = pxx  # joint distribution, 2D numpy array
         self.xsz = pxx.shape[0]
@@ -49,6 +50,12 @@ class DIB:
                   % (idx, self.cost, self.hiddens))
             idx += 1
 
+        self._merge_noise()
+        self._cleanup()
+        self._update()
+        print("Noise removal\tCost: %.4f\tClusters:%d" %
+              (self.cost, self.hiddens))
+
         return self.cost
 
 # core DIB helper functions #
@@ -62,7 +69,7 @@ class DIB:
         self.f = np.argmax(qt_x, axis=0)
         self.l = np.zeros((self.xsz, self.hiddens))
 
-        self.cost = 0     # effectively infinity
+        self.cost = np.inf
 
     def _step(self):
         """
@@ -82,32 +89,69 @@ class DIB:
         min_cost = self.cost
 
         for a, b in combinations(range(self.hiddens), 2):
-            qt = np.copy(self.qt)
-            qy = np.copy(self.qy)
-            qy_t = np.copy(self.qy_t)
-
-            # recalculate proposed qt
-            qt[a] += qt[b]
-            qt[b] = 0
-
-            # recalculate proposed qy
-            qy[a] += qy[b]
-            qy[b] = 0
-
-            # recalculate proposed qy_t
-            qy_t[:, a] = (self.qt[a] * qy_t[:, a] + self.qt[b]
-                          * qy_t[:, b]) / (self.qt[a] + self.qt[b])
-            qy_t[:, b] = 0
-            qy_t[a, :] += qy_t[b, :]
-            qy_t[b, :] = 0
-
-            cost = self._calculate_cost(qy_t, qt, qy)
+            cost = self._two_merge_cost(a, b)
 
             if cost < min_cost:
                 min_cost = cost
                 f = np.where(self.f == a, b, self.f)
 
         self.f = f
+
+    def _merge_noise(self):
+        """
+        force merge low likelihood clusters
+            note: this is done without updates after each merge
+            it is assumed merging these clusters has minimal effect on the
+            overall clustering
+        """
+        limit = self.noise_limit / self.hiddens     # arbitrary
+
+        likelihoods = [np.sum(self.px[self.f == x])
+                       for x in range(self.hiddens)]
+
+        for a in range(self.hiddens):
+            if likelihoods[a] > limit:
+                continue
+
+            min_cost = np.inf
+            best_b = None
+
+            for b in range(self.hiddens):
+                # only merge into high-likelihood clusters
+                if likelihoods[b] < limit:    # only merge into
+                    continue
+
+                cost = self._two_merge_cost(a, b)
+
+                if cost < min_cost:
+                    best_b = b
+
+            self.f = np.where(self.f == a, best_b, self.f)
+
+    def _two_merge_cost(self, a, b):
+        """
+        calculate the cost of proposed two-cluster merge
+        """
+        qt = np.copy(self.qt)
+        qy = np.copy(self.qy)
+        qy_t = np.copy(self.qy_t)
+
+        # recalculate proposed qt
+        qt[a] += qt[b]
+        qt[b] = 0
+
+        # recalculate proposed qy
+        qy[a] += qy[b]
+        qy[b] = 0
+
+        # recalculate proposed qy_t
+        qy_t[:, a] = (self.qt[a] * qy_t[:, a] + self.qt[b]
+                      * qy_t[:, b]) / (self.qt[a] + self.qt[b])
+        qy_t[:, b] = 0
+        qy_t[a, :] += qy_t[b, :]
+        qy_t[b, :] = 0
+
+        return self._calculate_cost(qy_t, qt, qy)
 
     def _update(self):
         """
