@@ -84,7 +84,7 @@ if perform_beta_sweep:
     info_y = np.zeros_like(betas, dtype=np.float32)
     info_x = np.zeros_like(betas, dtype=np.float32)
     clusters = {x: [] for x in range(1, hiddens)}
-    clusters2 = np.zeros_like(betas, dtype=np.unit8)
+    clusters2 = np.zeros_like(betas, dtype=np.uint8)
     clusterings = {}
 
     for i, beta in enumerate(betas):
