@@ -42,7 +42,7 @@ class CIFARIterator:
 
 
 if __name__ == '__main__':
-    dfile = '/Users/andrew/rgml/information-bottleneck/cifar-10-batches-py/data_batch_1'
+    dfile = '/Users/andrew/Documents/rgml/cifar-10_data/data_all'
 
     data = CIFARIterator(dfile, binarize=True)
 

@@ -31,13 +31,25 @@ class DIB:
         self._initialize_clusters()
         self._update()
 
-        prev_cost = 1e6
+        prev_cost = np.inf
 
         idx = 0
 
-        while abs(self.cost - prev_cost) > epsilon:
+        # memorization phase
+        while prev_cost - self.cost > 0:
             prev_cost = self.cost
-            self._step()
+            self._ba_step(memorize=True)
+            self._cleanup()
+            self._update()
+            print("Iteration %d-ME:\tCost: %.4f\tClusters:%d"
+                  % (idx, self.cost, self.hiddens))
+            idx += 1
+
+        prev_cost = np.inf
+        # compression phase
+        while prev_cost - self.cost > epsilon:
+            prev_cost = self.cost
+            self._ba_step(memorize=False)
             self._cleanup()
             self._update()
             print("Iteration %d-BA:\tCost: %.4f\tClusters:%d"
@@ -50,6 +62,7 @@ class DIB:
                   % (idx, self.cost, self.hiddens))
             idx += 1
 
+        # noise cleaning
         self._merge_noise()
         self._cleanup()
         self._update()
@@ -70,16 +83,6 @@ class DIB:
         self.l = np.zeros((self.xsz, self.hiddens))
 
         self.cost = np.inf
-
-    def _step(self):
-        """
-        updates cluster assignments by maximizing DIB objective
-        """
-        qt_x = self.l.T     # not correct, but should work for DIB scheme
-
-        f = np.argmax(qt_x, axis=0)
-
-        self.f = f
 
     def _try_merge(self):
         """
@@ -153,6 +156,26 @@ class DIB:
 
         return self._calculate_cost(qy_t, qt, qy)
 
+    def _ba_step(self, memorize=False):
+        """
+        updates cluster assignments by performing BA step
+        """
+        # perform BA step
+        d = np.zeros((self.xsz, self.hiddens))
+        for x in range(self.xsz):   # can this be simplified?
+            for t in range(self.hiddens):
+                for y in range(self.hiddens):
+                    d[x, t] += self.qy_x[y, x] * (
+                        np.log2(self.qy_x[y, x] + DIB.eps) -
+                        np.log2(self.qy_t[y, t] + DIB.eps))
+
+        if memorize:
+            l = - self.beta * d
+        else:
+            l = np.log2(self.qt + DIB.eps) - self.beta * d
+
+        self.f = np.argmax(l, axis=1)
+
     def _update(self):
         """
         recalculates q(t) and q(t|x) for current cluster assignments
@@ -177,16 +200,6 @@ class DIB:
                 self.qy_t[y, t] += divide(self.pxx[x, xp], self.qt[t])
                 self.qy_x[y, x] += divide(self.pxx[x, xp], self.px[x])
 
-        d = np.zeros((self.xsz, self.hiddens))
-        for x in range(self.xsz):   # can this be simplified?
-            for t in range(self.hiddens):
-                for y in range(self.hiddens):
-                    d[x, t] += self.qy_x[y, x] * (
-                        np.log2(self.qy_x[y, x] + DIB.eps) -
-                        np.log2(self.qy_t[y, t] + DIB.eps))
-
-        self.l = np.log2(self.qt + DIB.eps) - 2 * self.beta * d
-
         self.cost = self._calculate_cost(self.qy_t, self.qt, self.qy)
 
     def _calculate_cost(self, qy_t, qt, qy):
@@ -196,6 +209,9 @@ class DIB:
         cost = 0
         for t in range(self.hiddens):
             cost -= qt[t] * np.log2(qt[t] + DIB.eps)
+
+        for y in range(self.hiddens):
+            cost -= qy[y] * np.log2(qy[y] + DIB.eps)
 
         for y in range(self.hiddens):
             for t in range(self.hiddens):

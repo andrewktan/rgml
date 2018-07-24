@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from cifar_iterator import *
 from information_bottleneck_q import *
-from ising_iterator import *
 
 # parameters #
 ##############
@@ -12,13 +12,13 @@ perform_demo = True
 
 symmetrize = True
 
-sz = 81     # size of the samples (sq)
+sz = 32     # size of the samples (sq)
 vsz = 3   # size of visible block (sq)
-edist = 4   # distance to environment patch
+edist = 3   # distance to environment patch
+stride = 8
 tsz = 1000000   # table size
-dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_45'
-savefile = "/Users/andrew/Documents/rgml/ip_data/strawberry/isingib_q_joint_%02d.npy" % edist
-# savefile = "isingib_q_joint_%02d.npy" % edist
+dfile = '/Users/andrew/Documents/rgml/cifar-10_data/data_all'
+savefile = "out/cifarib_q_joint_%02d.npy" % edist
 
 # load data #
 #############
@@ -38,14 +38,31 @@ def calculate_joint(eloc):
     Calculates the joint p(x,x')
     """
     thist = np.zeros((2**(vsz**2), 2**(vsz**2)))
+    idx = 0
 
-    for _, sample in zip(range(tsz), IsingIterator(dfile, img_size=sz)):
-        vcode = to_code(np.reshape(sample[0:vsz, 0:vsz], -1))
-        ecode = to_code(np.reshape(sample[eloc:eloc+vsz, eloc:eloc+vsz], -1))
+    for sample in CIFARIterator(dfile, binarize=True):
+        for r in range(0, sz, stride):
+            for c in range(0, sz, stride):
+                if idx >= tsz:
+                    break
 
-        thist[vcode, ecode] += 1
+                # careful about wraparound
+                rl = np.mod(r - vsz//2, sz)
+                ru = np.mod(r + (vsz + 1)//2, sz)
+                cl = np.mod(c - vsz//2, sz)
+                cu = np.mod(c + (vsz + 1)//2, sz)
 
-    thist /= tsz
+                vcode = to_code(np.reshape(sample[rl:ru, cl:cu], -1))
+                ecode = to_code(np.reshape(
+                    sample[rl+eloc:ru+eloc, cl:cu], -1))
+
+                thist[vcode, ecode] += 1
+                idx += 1
+
+    if idx != tsz:
+        print("Insuffcient number of samples (%d)" % idx)
+
+    thist /= idx
 
     return thist
 
@@ -60,8 +77,9 @@ except IOError:
     thist = calculate_joint(edist)
     joint_file = open(savefile, 'wb')
     np.save(joint_file, thist)
+    print("Saved new joint distribution as %s" % savefile)
 else:
-    print("Loading saved joint distribution")
+    print("Loading saved joint distribution %s" % savefile)
     thist = np.load(joint_file)
 
 # information bottleneck test #
@@ -70,7 +88,7 @@ if symmetrize:
     thist = (thist + thist.T)/2
 
 if perform_demo:
-    dib = DIB(thist, beta=80, hiddens=30)
+    dib = DIB(thist, beta=15, hiddens=30)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
@@ -110,7 +128,7 @@ if perform_beta_sweep:
     plt.ylabel('I(Y;T)')
     plt.show()
 
-    with open("ipdata_%02d.pkl" % edist, 'wb') as f:
+    with open("out/ipdata_cq_%02d.pkl" % edist, 'wb') as f:
         dump = {}
         dump['info_x'] = info_x
         dump['info_y'] = info_y
