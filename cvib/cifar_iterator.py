@@ -11,39 +11,13 @@ class CIFARIterator(DatasetIterator):
     iterator for CIFAR-10 batch files
     """
 
-    def __init__(self, dfile, mb_size=32, vsz=3, test=False, grayscale=False, binarize=False, debug=False):
+    def __init__(self, dfile, mb_size=32, vsz=3, grayscale=False, binarize=False, debug=False):
 
         # load all training files
-        self.data = np.array([])
-        self.labels = np.array([])
-
-        if test:
-            with open(dfile, 'rb') as fo:
-                self.batch_dict = pickle.load(fo, encoding='bytes')
-                self.data = self.batch_dict[b'data']
-                self.labels = np.array(
-                    self.batch_dict[b'labels']).reshape(-1, 1)
-        else:
-            for idx in range(1, 6):
-                if debug:
-                    print("Loading %s" % dfile % idx)
-                with open(dfile % idx, 'rb') as fo:
-                    self.batch_dict = pickle.load(fo, encoding='bytes')
-
-                    if self.data.size:
-                        self.data = np.vstack(
-                            (self.data, self.batch_dict[b'data']))
-                    else:
-                        self.data = self.batch_dict[b'data']
-
-                    if self.labels.size:
-                        self.labels = np.vstack(
-                            (self.labels,
-                             np.array(self.batch_dict[b'labels']).reshape(-1, 1))
-                        )
-                    else:
-                        self.labels = np.array(
-                            self.batch_dict[b'labels']).reshape(-1, 1)
+        with open(dfile, 'rb') as fo:
+            batch_dict = pickle.load(fo, encoding='bytes')
+            self.data = batch_dict[b'data']
+            self.labels = np.array(batch_dict[b'labels']).reshape(-1, 1)
 
         self.sz = 32
         self.grayscale = grayscale
@@ -73,10 +47,10 @@ class CIFARIterator(DatasetIterator):
         items = self.data[indices, :]
 
         if self.nchannels == 1:
-            items = items.reshape(self.mb_size, self.sz**2, self.nchannels)
-            items = items.transpose((0, 2, 1))
-        else:
             items = items.reshape(self.mb_size, self.sz**2)
+        else:
+            items = items.reshape(self.mb_size, self.nchannels, self.sz**2)
+            items = items.transpose((0, 2, 1))
 
         labels = self.labels[indices]
 
@@ -85,11 +59,12 @@ class CIFARIterator(DatasetIterator):
 
 if __name__ == '__main__':
     dspath = '/Users/andrew/Documents/rgml/cifar-10_data/'
-    dsname = 'data_batch_%d'
+    dsname = 'data_all'
     dfile = "%s%s" % (dspath, dsname)
 
     it = CIFARIterator(dfile, grayscale=True, mb_size=32)
     samples, _ = it.next_batch()
 
-    plt.imshow(np.reshape(samples[0, :, :], (32, 32)), cmap=plt.cm.gray)
-    plt.show()
+    for idx in range(5):
+        plt.imshow(np.reshape(samples[idx, :], (32, 32)), cmap=plt.cm.gray)
+        plt.show()

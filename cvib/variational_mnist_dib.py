@@ -40,14 +40,12 @@ def encoder(vis):
     return encoding
 
 
-def decoder(encoding):
-    net = layers.linear(encoding, 1024)
-    net = layers.relu(net, 1024)
-    net = layers.fully_connected(net, esz, activation_fn=tf.nn.sigmoid)
+def decoder(encoding_sample):
+    net = tf.layers.dense(encoding_sample, units=1024)
+    net = tf.layers.dense(net, units=1024, activation=tf.nn.relu)
+    net = tf.layers.dense(net, units=esz)
     return net
 
-
-prior = ds.Normal(0.0, 1.0)
 
 # create graph #
 ################
@@ -56,12 +54,13 @@ with tf.variable_scope('encoder'):
 
 with tf.variable_scope('decoder'):
     penv = decoder(encoding)   # predicted environment
+    penv_sigmoid = tf.nn.sigmoid(penv)
 
 # class_loss = tf.losses.softmax_cross_entropy(
 #    logits=logits, onehot_labels=one_hot_labels) / math.log(2)
 
 pred_loss = tf.reduce_mean(tf.reduce_mean(
-    tf.nn.sigmoid_cross_entropy_with_logits(logits=2*env-1, labels=penv), 0))
+    tf.nn.sigmoid_cross_entropy_with_logits(logits=penv, labels=env), 0))
 
 
 info_loss = 0
@@ -126,7 +125,7 @@ def evaluate(epoch, debug=False):
     imgs = mnist_data.test.images
     labels = mnist_data.test.labels
     vis_data, env_data = separate_image(imgs)
-    loss, prediction = sess.run([pred_loss, penv],
+    loss, prediction = sess.run([pred_loss, penv_sigmoid],
                                 feed_dict={vis: vis_data, env: env_data})
 
     if epoch % 10 == 0 and debug:
