@@ -1,4 +1,3 @@
-
 import os
 import time
 
@@ -7,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from cifar_iterator import *
+from vae_helpers import *
 
 
 class VariationalAutoencoder():
@@ -25,6 +24,8 @@ class VariationalAutoencoder():
         self.NUM_TRAIN = num_train
         self.BATCH_SIZE = batch_size
 
+        self.dspath = '/Users/andrew/Documents/rgml/cifar-10_data'
+
         # initialize
         self.parameters = []
 
@@ -38,15 +39,15 @@ class VariationalAutoencoder():
                                                  None,
                                                  name='learning_rate')
 
-        dsfile = '/Users/andrew/Documents/rgml/cifar-10_data/data_all'
-
-        self.trainset = CIFARIterator(dsfile,
-                                      grayscale=True,
-                                      mb_size=self.BATCH_SIZE)
+        self.datasets = None
 
         self._create_network()
         self._create_loss()
         self._create_optimizer(self.parameters)
+
+    def _load_datasets(self, num_train=10):
+        mydatasets = read_cifar10_dataset(self.dspath)
+        self.datasets = reduce_training_set(mydatasets, num_train)
 
     def _create_network(self):
         self._encoder_network()
@@ -67,14 +68,14 @@ class VariationalAutoencoder():
 
             x_vectorized = tf.reshape(
                 self.x_placeholder, [-1, 1024], name='x-vectorized')
-            x_reconstr_mean_logits_vectorized = tf.reshape(
-                self.x_reconstr_mean_logits, [-1, 1024], name='x_reconstr_mean_vectorized')
+            x_reconstr_mean_vectorized = tf.reshape(
+                self.x_reconstr_mean, [-1, 1024], name='x_reconstr_mean_vectorized')
 
-            # pixel_loss = tf.reduce_sum(
-            # tf.square(x_reconstr_mean_vectorized - x_vectorized), 1)
-            pixel_loss = tf.reduce_mean(
-                tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=x_reconstr_mean_logits_vectorized, labels=x_vectorized))
+            pixel_loss = tf.reduce_sum(
+                tf.square(x_reconstr_mean_vectorized - x_vectorized), 1) / 1024
+            # pixel_loss = tf.reduce_mean(
+            # tf.nn.sigmoid_cross_entropy_with_logits(
+            # logits=x_reconstr_mean_logits_vectorized, labels=x_vectorized))
 
             self.pixel_loss = pixel_loss
 
@@ -371,10 +372,12 @@ class VariationalAutoencoder():
             self.parameters += [kernel, biases]
 
         with tf.variable_scope('dec_output'):
-            # self.x_reconstr_mean = tf.sigmoid(self.dec_conv2_2)
-            self.x_reconstr_mean_logits = self.dec_conv2_2
+            self.x_reconstr_mean = tf.sigmoid(self.dec_conv2_2)
+            # self.x_reconstr_mean_logits = self.dec_conv2_2
 
     def train(self, num_epochs_to_display=1):
+        self._load_datasets(num_train=self.NUM_TRAIN)
+
         tc = 0
         fc = 0
         lc = 0
@@ -400,8 +403,7 @@ class VariationalAutoencoder():
         with tf.Session() as sess:
             sess.run(init)
 
-            batch_images, _ = self.trainset.next_batch()
-            batch_images = np.reshape(batch_images, [-1, 32, 32, 1])
+            batch_images = self.datasets.train.next_batch(self.BATCH_SIZE)[0]
 
             t0 = time.time()
 
@@ -434,8 +436,8 @@ class VariationalAutoencoder():
 
                 for i in range(ITERATIONS_PER_EPOCH):
                     # pick a mini batch
-                    batch_images, _ = self.trainset.next_batch()
-                    batch_images = np.reshape(batch_images, [-1, 32, 32, 1])
+                    batch_images = self.datasets.train.next_batch(self.BATCH_SIZE)[
+                        0]
 
                     eps = np.random.normal(loc=0.0,
                                            scale=1.0,
@@ -447,6 +449,15 @@ class VariationalAutoencoder():
                     current_epoch_cost += tc
                     current_lat_cost += lc
                     current_pix_cost += pc
+
+                # average
+                current_epoch_cost /= ITERATIONS_PER_EPOCH  # average it over the iterations
+                current_lat_cost /= ITERATIONS_PER_EPOCH
+                current_pix_cost /= ITERATIONS_PER_EPOCH
+
+                costs['total'].append(current_epoch_cost)
+                costs['latent'].append(current_lat_cost)
+                costs['pixel'].append(current_pix_cost)
 
                 # print stats
                 if epoch % num_epochs_to_display == 0:
