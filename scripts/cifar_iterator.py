@@ -13,6 +13,7 @@ class CIFARIterator:
         with open(dfile, 'rb') as fo:
             self.batch_dict = pickle.load(fo, encoding='bytes')
             self.data = self.batch_dict[b'data']
+            self.labels = self.batch_dict[b'labels']
 
         self.nsamp = self.data.shape[0]
 

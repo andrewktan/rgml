@@ -50,9 +50,9 @@ class IsingIterator:
 
 
 if __name__ == '__main__':
-    dfile = '/Users/andrew/Documents/rgml/ising_data/data_0_45_cg_07_07'
+    dfile = '/Users/andrew/Documents/rgml/cifar-10_data/data_all_cg_03_15_full'
 
-    data = IsingIterator(dfile, img_size=27, roll=False)
+    data = IsingIterator(dfile, img_size=30, roll=False)
 
     for idx, image in enumerate(data):
         if idx > 5:

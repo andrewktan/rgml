@@ -10,8 +10,10 @@ from information_bottleneck import divide
 show_plot = True
 
 # load data
+# ip_files = sorted(
+# glob.glob("/Users/andrew/Documents/rgml/ip_data/vanilla2/ipdata_*.pkl"))
 ip_files = sorted(
-    glob.glob("/Users/andrew/Documents/rgml/ip_data/vanilla2/ipdata_*.pkl"))
+    glob.glob("out/ipdata_cq_*.pkl"))
 bsizes = [int(x[-6:-4]) for x in ip_files]
 
 ipdata = {}
@@ -61,11 +63,12 @@ if show_plot:
 
     f, axarr = plt.subplots(len(bsizes), sharex=True, sharey=True)
 
+    if len(bsizes) == 1:
+        axarr = [axarr]
+
     for bidx, bsize in enumerate(bsizes):
-        axarr[bidx].bar(clusters, marg_infos[bidx,:])
+        axarr[bidx].bar(clusters, marg_infos[bidx, :])
         axarr[bidx].set_ylabel("%dx%d" % (bsize, bsize))
-
-
 
     axarr[0].set_title('Normalized marginal information')
     axarr[-1].set_xlabel('number of clusters')

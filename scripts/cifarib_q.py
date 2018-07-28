@@ -54,7 +54,7 @@ def calculate_joint(eloc):
 
                 vcode = to_code(np.reshape(sample[rl:ru, cl:cu], -1))
                 ecode = to_code(np.reshape(
-                    sample[rl+eloc:ru+eloc, cl:cu], -1))
+                    sample[rl:ru, cl+eloc:cu+eloc], -1))
 
                 thist[vcode, ecode] += 1
                 idx += 1
@@ -88,17 +88,25 @@ if symmetrize:
     thist = (thist + thist.T)/2
 
 if perform_demo:
-    dib = DIB(thist, beta=15, hiddens=30)
+    beta = 15
+    dib = DIB(thist, beta=beta, hiddens=30)
     dib.compress()
     dib.report_clusters()
     c = dib.visualize_clusters(debug=True)
+
+    # save clustering
+    with open("out/cg_%02d_%02d.pkl" % (2*edist+1, beta), 'wb') as f:
+        dump = {}
+        dump['f'] = dib.report_clusters()
+        pickle.dump(dump, f)
+
 
 # beta sweep #
 ##############
 
 if perform_beta_sweep:
-    betas = np.arange(0, 80.1, 1.0)
-    hiddens = 100
+    betas = np.arange(0, 30.1, 2.0)
+    hiddens = 20
     info_y = np.zeros_like(betas, dtype=np.float32)
     info_x = np.zeros_like(betas, dtype=np.float32)
     clusters = {x: [] for x in range(1, hiddens)}
