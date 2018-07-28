@@ -12,7 +12,7 @@ from vae_helpers import *
 class VariationalAutoencoder():
     def __init__(self,
                  latent_dimensions=10,
-                 num_epochs=10,
+                 num_epochs=100,
                  learning_rate=1e-3,
                  num_train=50000,
                  batch_size=32):
@@ -65,17 +65,20 @@ class VariationalAutoencoder():
 
     def _create_loss(self):
         with tf.variable_scope('loss_layer'):
-
             x_vectorized = tf.reshape(
                 self.x_placeholder, [-1, 1024], name='x-vectorized')
-            x_reconstr_mean_vectorized = tf.reshape(
-                self.x_reconstr_mean, [-1, 1024], name='x_reconstr_mean_vectorized')
 
-            pixel_loss = tf.reduce_sum(
-                tf.square(x_reconstr_mean_vectorized - x_vectorized), 1) / 1024
+            x_reconstr_mean_vectorized = tf.reshape(
+                self.x_reconstr_mean, [-1, 1024], name='x_reconstr_mean')
+
+            x_reconstr_logits_vectorized = tf.reshape(
+                self.x_reconstr_logits, [-1, 1024], name='x_reconstr_logits_vectorized')
+
+            pixel_loss = tf.sqrt(tf.reduce_mean(
+                tf.square(x_reconstr_mean_vectorized - x_vectorized), 1))
             # pixel_loss = tf.reduce_mean(
             # tf.nn.sigmoid_cross_entropy_with_logits(
-            # logits=x_reconstr_mean_logits_vectorized, labels=x_vectorized))
+            # logits=x_reconstr_logits_vectorized, labels=x_vectorized))
 
             self.pixel_loss = pixel_loss
 
@@ -90,12 +93,10 @@ class VariationalAutoencoder():
 
     def _create_optimizer(self, variables):
         with tf.variable_scope('train'):
-            self.train_Step = tf.train.AdamOptimizer(
+            self.train_step = tf.train.AdamOptimizer(
                 learning_rate=self.lr_placeholder).minimize(self.cost, var_list=variables)
 
     def _encoder_network(self):
-        images = self.x_placeholder
-
         # conv 1.1
         with tf.variable_scope('enc_conv1_1'):
             kernel = tf.get_variable(name='weights',
@@ -104,7 +105,7 @@ class VariationalAutoencoder():
                                      initializer=tf.contrib.layers.xavier_initializer(),
                                      trainable=True)
 
-            conv = tf.nn.conv2d(images,
+            conv = tf.nn.conv2d(self.x_placeholder,
                                 filter=kernel,
                                 strides=[1, 1, 1, 1],
                                 padding='SAME')
@@ -368,12 +369,11 @@ class VariationalAutoencoder():
 
             out = tf.nn.bias_add(conv, biases)
 
-            self.dec_conv2_2 = out
+            self.x_reconstr_logits = out
             self.parameters += [kernel, biases]
 
         with tf.variable_scope('dec_output'):
-            self.x_reconstr_mean = tf.sigmoid(self.dec_conv2_2)
-            # self.x_reconstr_mean_logits = self.dec_conv2_2
+            self.x_reconstr_mean = tf.sigmoid(self.x_reconstr_logits)
 
     def train(self, num_epochs_to_display=1):
         self._load_datasets(num_train=self.NUM_TRAIN)
@@ -443,8 +443,14 @@ class VariationalAutoencoder():
                                            scale=1.0,
                                            size=(self.BATCH_SIZE, self.LATENT_DIM))
 
-                    tc, lc, pc = sess.run([self.cost, self.latent_loss_mean, self.pixel_loss_mean],
-                                          feed_dict={self.x_placeholder: batch_images, self.eps_placeholder: eps, self.lr_placeholder: current_lr})
+                    _, tc, lc, pc = sess.run([self.train_step,
+                                              self.cost,
+                                              self.latent_loss_mean,
+                                              self.pixel_loss_mean],
+                                             feed_dict={
+                                                 self.x_placeholder: batch_images,
+                                                 self.eps_placeholder: eps,
+                                                 self.lr_placeholder: current_lr})
 
                     current_epoch_cost += tc
                     current_lat_cost += lc
@@ -464,7 +470,41 @@ class VariationalAutoencoder():
                     t1 = time.time()
                     print(' epoch: {}/{} -- cost {:.2f} = {:.2f} L + {:.2f} P -- time taken {:.2f}'.format(
                         epoch+1, self.NUM_EPOCHS, current_epoch_cost, current_lat_cost, current_pix_cost, t1-t0))
-                    # Reset the timer
+
+                    # save images
+                    h_num, v_num = (5, 2)
+
+                    num_visualize = h_num * v_num
+
+                    sample_images = self.datasets.train.next_batch(num_visualize)[
+                        0]
+
+                    eps = np.random.normal(loc=0.0, scale=1.0, size=(
+                        num_visualize, self.LATENT_DIM))
+
+                    reconstructed_images, _ = sess.run((self.x_reconstr_mean, self.x_reconstr_logits), feed_dict={
+                        self.x_placeholder: sample_images,
+                        self.eps_placeholder: eps})
+
+                    # Reconstruct images
+                    plt.figure(figsize=(10, 6))
+                    for i in range(num_visualize):
+                        plt.subplot(2*v_num, h_num, i + 1)
+                        plt.imshow(np.squeeze(sample_images[i]), vmin=0, vmax=1,
+                                   interpolation='none', cmap=plt.cm.gray)
+                        plt.title("Test input")
+                        plt.axis('off')
+
+                        plt.subplot(2*v_num, h_num, num_visualize + i + 1)
+                        plt.imshow(np.squeeze(reconstructed_images[i]), vmin=0, vmax=1,
+                                   interpolation='none', cmap=plt.cm.gray)
+                        plt.title("Reconstruction")
+                        plt.axis('off')
+                    plt.savefig(
+                        'out/cifar-reconstruction-ep{}.pdf'.format(epoch))
+                    plt.close()
+
+                    # reset timer
                     t0 = t1
 
                 # reset costs
