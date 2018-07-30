@@ -6,15 +6,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from vae_helpers import *
+from cifar_dataset import *
 
 
 class VariationalAutoencoder():
     def __init__(self,
-                 latent_dimensions=10,
-                 num_epochs=100,
-                 learning_rate=1e-3,
-                 num_train=50000,
+                 dstrain,
+                 dstest,
+                 latent_dimensions=5,
+                 num_epochs=30,
+                 learning_rate=2.5e-5,
+                 num_train=32,
                  batch_size=32):
 
         # hyperparameters
@@ -24,30 +26,30 @@ class VariationalAutoencoder():
         self.NUM_TRAIN = num_train
         self.BATCH_SIZE = batch_size
 
-        self.dspath = '/Users/andrew/Documents/rgml/cifar-10_data'
-
         # initialize
+        self.dstrain = dstrain
+        self.dstrain.set_mbsize(batch_size)
+
+        self.dstest = dstest
+
         self.parameters = []
 
         with tf.variable_scope('image_input'):
-            self.x_placeholder = tf.placeholder('float',
-                                                shape=[None, 32, 32, 1],
-                                                name='x-input')
+            self.input_image_raw = tf.placeholder('float',
+                                                  shape=[None, 1024],
+                                                  name='image-input')
+
+            self.input_image = tf.reshape(
+                self.input_image_raw, [-1, 32, 32, 1])
 
         with tf.variable_scope('learning_parameters'):
             self.lr_placeholder = tf.placeholder('float',
                                                  None,
                                                  name='learning_rate')
 
-        self.datasets = None
-
         self._create_network()
         self._create_loss()
         self._create_optimizer(self.parameters)
-
-    def _load_datasets(self, num_train=10):
-        mydatasets = read_cifar10_dataset(self.dspath)
-        self.datasets = reduce_training_set(mydatasets, num_train)
 
     def _create_network(self):
         self._encoder_network()
@@ -65,8 +67,7 @@ class VariationalAutoencoder():
 
     def _create_loss(self):
         with tf.variable_scope('loss_layer'):
-            x_vectorized = tf.reshape(
-                self.x_placeholder, [-1, 1024], name='x-vectorized')
+            x_vectorized = self.input_image_raw
 
             x_reconstr_mean_vectorized = tf.reshape(
                 self.x_reconstr_mean, [-1, 1024], name='x_reconstr_mean')
@@ -74,8 +75,8 @@ class VariationalAutoencoder():
             x_reconstr_logits_vectorized = tf.reshape(
                 self.x_reconstr_logits, [-1, 1024], name='x_reconstr_logits_vectorized')
 
-            pixel_loss = tf.sqrt(tf.reduce_mean(
-                tf.square(x_reconstr_mean_vectorized - x_vectorized), 1))
+            pixel_loss = tf.reduce_mean(
+                tf.square(x_reconstr_mean_vectorized - x_vectorized), 1)
             # pixel_loss = tf.reduce_mean(
             # tf.nn.sigmoid_cross_entropy_with_logits(
             # logits=x_reconstr_logits_vectorized, labels=x_vectorized))
@@ -88,8 +89,7 @@ class VariationalAutoencoder():
             self.latent_loss_mean = tf.reduce_mean(self.latent_loss)
             self.pixel_loss_mean = tf.reduce_mean(self.pixel_loss)
 
-            self.cost = tf.reduce_mean(
-                self.latent_loss + self.pixel_loss, name='cost_function')   # average over batch
+            self.cost = self.latent_loss_mean + self.pixel_loss_mean
 
     def _create_optimizer(self, variables):
         with tf.variable_scope('train'):
@@ -105,7 +105,7 @@ class VariationalAutoencoder():
                                      initializer=tf.contrib.layers.xavier_initializer(),
                                      trainable=True)
 
-            conv = tf.nn.conv2d(self.x_placeholder,
+            conv = tf.nn.conv2d(self.input_image,
                                 filter=kernel,
                                 strides=[1, 1, 1, 1],
                                 padding='SAME')
@@ -287,7 +287,7 @@ class VariationalAutoencoder():
                                 padding='SAME')
 
             biases = tf.Variable(
-                tf.constant(0.1, shape=[32], dtype=tf.float32),
+                tf.constant(1000.0, shape=[32], dtype=tf.float32),
                 trainable=True,
                 name='biases')
 
@@ -310,7 +310,7 @@ class VariationalAutoencoder():
                                 padding='SAME')
 
             biases = tf.Variable(
-                tf.constant(0.1, shape=[32], dtype=tf.float32),
+                tf.constant(0.0, shape=[32], dtype=tf.float32),
                 trainable=True,
                 name='biases')
 
@@ -340,7 +340,7 @@ class VariationalAutoencoder():
                                 padding='SAME')
 
             biases = tf.Variable(
-                tf.constant(0.1, shape=[1], dtype=tf.float32),
+                tf.constant(0.0, shape=[1], dtype=tf.float32),
                 trainable=True,
                 name='biases')
 
@@ -363,7 +363,7 @@ class VariationalAutoencoder():
                                 padding='SAME')
 
             biases = tf.Variable(
-                tf.constant(0.1, shape=[1], dtype=tf.float32),
+                tf.constant(0.0, shape=[1], dtype=tf.float32),
                 trainable=True,
                 name='biases')
 
@@ -376,8 +376,6 @@ class VariationalAutoencoder():
             self.x_reconstr_mean = tf.sigmoid(self.x_reconstr_logits)
 
     def train(self, num_epochs_to_display=1):
-        self._load_datasets(num_train=self.NUM_TRAIN)
-
         tc = 0
         fc = 0
         lc = 0
@@ -388,7 +386,7 @@ class VariationalAutoencoder():
         costs['pixel'] = []
         costs['total'] = []
 
-        current_lr = 1e-4
+        current_lr = self.LEARNING_RATE
 
         init = tf.initialize_all_variables()
         saver = tf.train.Saver(self.parameters)
@@ -403,7 +401,7 @@ class VariationalAutoencoder():
         with tf.Session() as sess:
             sess.run(init)
 
-            batch_images = self.datasets.train.next_batch(self.BATCH_SIZE)[0]
+            batch_images, _ = self.dstrain.next_batch()
 
             t0 = time.time()
 
@@ -414,7 +412,7 @@ class VariationalAutoencoder():
             tc, lc, pc = sess.run([self.cost,
                                    self.latent_loss_mean,
                                    self.pixel_loss_mean],
-                                  feed_dict={self.x_placeholder: batch_images,
+                                  feed_dict={self.input_image_raw: batch_images,
                                              self.eps_placeholder: eps}
                                   )
 
@@ -436,8 +434,7 @@ class VariationalAutoencoder():
 
                 for i in range(ITERATIONS_PER_EPOCH):
                     # pick a mini batch
-                    batch_images = self.datasets.train.next_batch(self.BATCH_SIZE)[
-                        0]
+                    batch_images, _ = self.dstrain.next_batch()
 
                     eps = np.random.normal(loc=0.0,
                                            scale=1.0,
@@ -448,7 +445,7 @@ class VariationalAutoencoder():
                                               self.latent_loss_mean,
                                               self.pixel_loss_mean],
                                              feed_dict={
-                                                 self.x_placeholder: batch_images,
+                                                 self.input_image_raw: batch_images,
                                                  self.eps_placeholder: eps,
                                                  self.lr_placeholder: current_lr})
 
@@ -472,19 +469,24 @@ class VariationalAutoencoder():
                         epoch+1, self.NUM_EPOCHS, current_epoch_cost, current_lat_cost, current_pix_cost, t1-t0))
 
                     # save images
-                    h_num, v_num = (5, 2)
+                    h_num, v_num = (1, 1)
 
                     num_visualize = h_num * v_num
 
-                    sample_images = self.datasets.train.next_batch(num_visualize)[
-                        0]
+                    sample_images, _ = self.dstrain.next_batch()
+                    sample_images = sample_images[0:num_visualize, :]
 
                     eps = np.random.normal(loc=0.0, scale=1.0, size=(
                         num_visualize, self.LATENT_DIM))
 
-                    reconstructed_images, _ = sess.run((self.x_reconstr_mean, self.x_reconstr_logits), feed_dict={
-                        self.x_placeholder: sample_images,
-                        self.eps_placeholder: eps})
+                    reconstructed_images, _ = sess.run((self.x_reconstr_mean,
+                                                        self.x_reconstr_logits),
+                                                       feed_dict={
+                        self.input_image_raw: sample_images,
+                        self.eps_placeholder: eps
+                    })
+
+                    sample_images = np.reshape(sample_images, [-1, 32, 32])
 
                     # Reconstruct images
                     plt.figure(figsize=(10, 6))
@@ -515,5 +517,11 @@ class VariationalAutoencoder():
 
 
 if __name__ == '__main__':
-    VAE = VariationalAutoencoder()
+    dspath_train = '/Users/andrew/Documents/rgml/cifar-10_data/data_all'
+    dspath_test = '/Users/andrew/Documents/rgml/cifar-10_data/test_batch'
+
+    dstrain = CIFARDataset(dspath_train, grayscale=True)
+    dstest = CIFARDataset(dspath_test, grayscale=True, mb_size=-1)
+
+    VAE = VariationalAutoencoder(dstrain, dstest)
     VAE.train()
