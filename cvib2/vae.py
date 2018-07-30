@@ -7,13 +7,15 @@ from keras.layers import (Conv2D, Conv2DTranspose, Dense, Flatten, Input,
                           Lambda, Reshape)
 from keras.losses import binary_crossentropy, mse
 from keras.models import Model
-from keras.utils import plot_model
 
 from vae_utils import *
 
+# from keras.utils import plot_model
+
+
 # (hyper)parameters
 input_shape = (32, 32, 3)
-latent_dim = 2
+latent_dim = 512
 epochs = 1
 batch_size = 32
 
@@ -31,34 +33,26 @@ inputs = Input(shape=input_shape, name='encoder_input')
 x = inputs
 
 x = Conv2D(filters=16,
-           kernel_size=4,
+           kernel_size=(4, 4),
            activation='relu',
            strides=2,
            padding='same')(x)
 
 x = Conv2D(filters=32,
-           kernel_size=4,
-           activation='relu',
-           strides=2,
-           padding='same')(x)
-
-x = Conv2D(filters=64,
-           kernel_size=4,
+           kernel_size=(4, 4),
            activation='relu',
            strides=2,
            padding='same')(x)
 
 x = Conv2D(filters=32,
-           kernel_size=4,
+           kernel_size=(4, 4),
            activation='relu',
            strides=2,
            padding='same')(x)
-
-x_shape = K.int_shape(x)
 
 x = Flatten()(x)
 
-x = Dense(16, activation='relu')(x)
+x = Dense(4*4*32, activation='relu')(x)
 z_mean = Dense(latent_dim, name='z_mean')(x)
 z_log_var = Dense(latent_dim, name='z_log_var')(x)
 
@@ -66,54 +60,45 @@ z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
 
 encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
 encoder.summary()
-plot_model(encoder, to_file='out/vae_cnn_encoder.png', show_shapes=True)
+# plot_model(encoder, to_file='out/vae_cnn_encoder.png', show_shapes=True)
 
 # decoder
 latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-x = Dense(x_shape[1] * x_shape[2] * x_shape[3],
-          activation='relu')(latent_inputs)
-x = Reshape(x_shape[1:])(x)
+x = Dense(500, activation='relu')(latent_inputs)
+
+x = Dense(4*4*32, activation='relu')(x)
+
+x = Reshape([4, 4, 32])(x)
 
 x = Conv2DTranspose(filters=32,
-                    kernel_size=4,
+                    kernel_size=(4, 4),
                     activation='relu',
                     strides=2,
                     padding='same')(x)
-
-x = Conv2DTranspose(filters=64,
-                    kernel_size=4,
-                    activation='relu',
-                    strides=2,
-                    padding='same')(x)
-
-x = Conv2DTranspose(filters=32,
-                    kernel_size=4,
-                    activation='relu',
-                    strides=2,
-                    padding='same')(x)
-
 
 x = Conv2DTranspose(filters=16,
-                    kernel_size=4,
+                    kernel_size=(4, 4),
                     activation='relu',
                     strides=2,
                     padding='same')(x)
 
+
 outputs = Conv2DTranspose(filters=3,
-                          kernel_size=4,
+                          kernel_size=(4, 4),
+                          strides=2,
                           activation='sigmoid',
                           padding='same',
                           name='decoder_output')(x)
 
 decoder = Model(latent_inputs, outputs, name='decoder')
 decoder.summary()
-plot_model(decoder, to_file='out/vae_cnn_decoder.png', show_shapes=True)
+# plot_model(decoder, to_file='out/vae_cnn_decoder.png', show_shapes=True)
 
 # VAE model
 outputs = decoder(encoder(inputs)[2])
 vae = Model(inputs, outputs, name='vae')
 
-plot_model(vae, to_file='out/vae.png', show_shapes=True)
+# plot_model(vae, to_file='out/vae.png', show_shapes=True)
 
 if __name__ == '__main__':
 
@@ -135,7 +120,9 @@ if __name__ == '__main__':
             batch_size=batch_size,
             validation_data=(image_test, None))
 
-    plot_results((encoder, decoder),
-                 (image_test, label_test),
-                 batch_size=batch_size,
-                 model_name='vae')
+    vae.save_weights('vae_cnn_cifar.h5')
+
+    # plot_results((encoder, decoder),
+    # (image_test, label_test),
+    # batch_size=batch_size,
+    # model_name='vae')
