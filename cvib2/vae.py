@@ -9,6 +9,7 @@ from keras.losses import binary_crossentropy, mse
 from keras.models import Model
 from keras.utils import plot_model
 
+from vae_components import *
 from vae_utils import *
 
 if __name__ == '__main__':
@@ -16,7 +17,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='VAE for CIFAR-10')
     parser.add_argument('--epochs', type=int, default=20)
     parser.add_argument('--optimizer', type=str, default='rmsprop')
-    parser.add_argument('--train', type=bool, default=True)
+    parser.add_argument('--train', dest='train', action='store_true')
+    parser.add_argument('--load', dest='train', action='store_false')
+    parser.set_defaults(train=True)
     parser.add_argument('--show_graphs', type=bool, default=False)
 
     args = parser.parse_args()
@@ -39,85 +42,28 @@ if __name__ == '__main__':
     image_test = image_test.astype('float32') / 255
 
     # encoder
-    inputs = Input(shape=input_shape, name='encoder_input')
-    x = inputs
+    inputs = Input(shape=[32, 32, 3], name='encoder_input')
+    encoder = VAE_Encoder(inputs,
+                          latent_dim=latent_dim,
+                          intermediate_dim=intermediate_dim,
+                          num_filters=num_filters,
+                          num_conv=num_conv)
 
-    x = Conv2D(filters=3,
-               kernel_size=2,
-               activation='relu',
-               strides=1,
-               padding='same')(x)
-
-    x = Conv2D(filters=num_filters,
-               kernel_size=2,
-               activation='relu',
-               strides=2,
-               padding='same')(x)
-
-    x = Conv2D(filters=num_filters,
-               kernel_size=num_conv,
-               activation='relu',
-               strides=1,
-               padding='same')(x)
-
-    x = Conv2D(filters=num_filters,
-               kernel_size=num_conv,
-               activation='relu',
-               strides=1,
-               padding='same')(x)
-
-    x_shape = K.int_shape(x)
-
-    x = Flatten()(x)
-
-    x = Dense(intermediate_dim, activation='relu')(x)
-    z_mean = Dense(latent_dim, name='z_mean')(x)
-    z_log_var = Dense(latent_dim, name='z_log_var')(x)
-
-    z = Lambda(sampling, output_shape=(latent_dim,),
-               name='z')([z_mean, z_log_var])
-
-    encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
     encoder.summary()
 
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-    x = Dense(intermediate_dim, activation='relu')(latent_inputs)
+    decoder = VAE_Decoder(latent_inputs,
+                          latent_dim=latent_dim,
+                          intermediate_dim=intermediate_dim,
+                          num_filters=num_filters,
+                          num_conv=num_conv)
 
-    x = Dense(x_shape[1]*x_shape[2]*x_shape[3], activation='relu')(x)
-
-    x = Reshape(x_shape[1:])(x)
-
-    x = Conv2DTranspose(filters=num_filters,
-                        kernel_size=num_conv,
-                        activation='relu',
-                        strides=1,
-                        padding='same')(x)
-
-    x = Conv2DTranspose(filters=num_filters,
-                        kernel_size=num_conv,
-                        activation='relu',
-                        strides=1,
-                        padding='same')(x)
-
-    x = Conv2DTranspose(filters=num_filters,
-                        kernel_size=(3, 3),
-                        activation='relu',
-                        strides=(2, 2),
-                        padding='same')(x)
-
-    outputs = Conv2D(filters=3,
-                     kernel_size=(2, 2),
-                     strides=1,
-                     activation='sigmoid',
-                     padding='same',
-                     name='decoder_output')(x)
-
-    decoder = Model(latent_inputs, outputs, name='decoder')
     decoder.summary()
 
     # VAE model
-    outputs = decoder(encoder(inputs)[2])
+    [z_mean, z_log_var, z] = encoder(inputs)
+    outputs = decoder(z)
     vae = Model(inputs, outputs, name='vae')
 
     # cost function
@@ -155,7 +101,7 @@ if __name__ == '__main__':
         vae.load_weights('store/vae_cifar_ld%03d_e%03d.h5' %
                          (latent_dim, epochs))
 
-    for idx in range(5):
+    for idx in range(10):
         img = vae.predict(
             np.reshape(
                 image_test[idx, :, :, :], [1, 32, 32, 3]
