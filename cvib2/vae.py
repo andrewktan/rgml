@@ -7,20 +7,18 @@ from keras.layers import (Conv2D, Conv2DTranspose, Dense, Flatten, Input,
                           Lambda, Reshape)
 from keras.losses import binary_crossentropy, mse
 from keras.models import Model
+from keras.utils import plot_model
 
 from vae_utils import *
-
-# from keras.utils import plot_model
-
 
 # (hyper)parameters
 input_shape = (32, 32, 3)
 num_conv = 3
-intermediate_dim = 256
+intermediate_dim = 128
 latent_dim = 16
 num_filters = 32
 epochs = 2
-batch_size = 256
+batch_size = 128
 
 
 # import dataset
@@ -36,13 +34,13 @@ inputs = Input(shape=input_shape, name='encoder_input')
 x = inputs
 
 x = Conv2D(filters=3,
-           kernel_size=(2, 2),
+           kernel_size=2,
            activation='relu',
            strides=1,
            padding='same')(x)
 
 x = Conv2D(filters=num_filters,
-           kernel_size=(2, 2),
+           kernel_size=2,
            activation='relu',
            strides=2,
            padding='same')(x)
@@ -59,6 +57,8 @@ x = Conv2D(filters=num_filters,
            strides=1,
            padding='same')(x)
 
+x_shape = K.int_shape(x)
+
 x = Flatten()(x)
 
 x = Dense(intermediate_dim, activation='relu')(x)
@@ -69,15 +69,14 @@ z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
 
 encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
 encoder.summary()
-# plot_model(encoder, to_file='out/vae_cnn_encoder.png', show_shapes=True)
 
 # decoder
 latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
 x = Dense(intermediate_dim, activation='relu')(latent_inputs)
 
-x = Dense(16*16*num_filters, activation='relu')(x)
+x = Dense(x_shape[1]*x_shape[2]*x_shape[3], activation='relu')(x)
 
-x = Reshape([16, 16, num_filters])(x)
+x = Reshape(x_shape[1:])(x)
 
 x = Conv2DTranspose(filters=num_filters,
                     kernel_size=num_conv,
@@ -106,19 +105,21 @@ outputs = Conv2D(filters=3,
 
 decoder = Model(latent_inputs, outputs, name='decoder')
 decoder.summary()
-# plot_model(decoder, to_file='out/vae_cnn_decoder.png', show_shapes=True)
 
 # VAE model
 outputs = decoder(encoder(inputs)[2])
 vae = Model(inputs, outputs, name='vae')
 
-# plot_model(vae, to_file='out/vae.png', show_shapes=True)
-
 if __name__ == '__main__':
 
+    # get arguments
+    parser = argparse.ArgumentParser(description='VAE for CIFAR-10')
+    parser.add_argument('--train', type=bool, default=True)
+    parser.add_argument('--show_graphs', type=bool, default=False)
+
+    args = parser.parse_args()
+
     # cost function
-    # reconstruction_loss = mse(K.flatten(inputs),
-                              # K.flatten(outputs)) * 32**2
     reconstruction_loss = binary_crossentropy(K.flatten(inputs),
                                               K.flatten(outputs)) * 32**2
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
@@ -130,13 +131,24 @@ if __name__ == '__main__':
     vae.compile(optimizer='rmsprop', loss=None)
     vae.summary()
 
-    # train
-    vae.fit(image_train,
-            epochs=epochs,
-            batch_size=batch_size,
-            validation_data=(image_test, None))
+    # plot architecture
+    if args.show_graphs:
+        plot_model(encoder, to_file='out/vae_encoder.png', show_shapes=True)
+        plot_model(decoder, to_file='out/vae_decoder.png', show_shapes=True)
+        plot_model(vae, to_file='out/vae.png', show_shapes=True)
 
-    # vae.load_weights('vae_cnn_cifar.h5')
+    # train
+    if args.train:
+        vae.fit(image_train,
+                epochs=epochs,
+                batch_size=batch_size,
+                validation_data=(image_test, None))
+
+        vae.save_weights('vae_cifar.h5')
+        encoder.save_weights('enc_cifar.h5')
+        decoder.save_weights('dec_cifar.h5')
+    else:
+        vae.load_weights('vae_cifar.h5')
 
     for idx in range(5):
         img = vae.predict(
@@ -146,7 +158,3 @@ if __name__ == '__main__':
         )
         plt.imshow(np.concatenate((np.squeeze(img), image_test[idx, :, :, :])))
         plt.show()
-    # plot_results((encoder, decoder),
-        # (image_test, label_test),
-        # batch_size=batch_size,
-        # model_name='vae')
