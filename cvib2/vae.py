@@ -15,9 +15,12 @@ from vae_utils import *
 
 # (hyper)parameters
 input_shape = (32, 32, 3)
+num_conv = 3
+intermediate_dim = 256
 latent_dim = 16
+num_filters = 32
 epochs = 2
-batch_size = 32
+batch_size = 256
 
 
 # import dataset
@@ -38,27 +41,27 @@ x = Conv2D(filters=3,
            strides=1,
            padding='same')(x)
 
-x = Conv2D(filters=32,
+x = Conv2D(filters=num_filters,
            kernel_size=(2, 2),
            activation='relu',
            strides=2,
            padding='same')(x)
 
-x = Conv2D(filters=32,
-           kernel_size=(2, 2),
+x = Conv2D(filters=num_filters,
+           kernel_size=num_conv,
            activation='relu',
            strides=1,
            padding='same')(x)
 
-x = Conv2D(filters=32,
-           kernel_size=(2, 2),
+x = Conv2D(filters=num_filters,
+           kernel_size=num_conv,
            activation='relu',
            strides=1,
            padding='same')(x)
 
 x = Flatten()(x)
 
-x = Dense(4*4*32, activation='relu')(x)
+x = Dense(intermediate_dim, activation='relu')(x)
 z_mean = Dense(latent_dim, name='z_mean')(x)
 z_log_var = Dense(latent_dim, name='z_log_var')(x)
 
@@ -70,28 +73,28 @@ encoder.summary()
 
 # decoder
 latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-x = Dense(128, activation='relu')(latent_inputs)
+x = Dense(intermediate_dim, activation='relu')(latent_inputs)
 
-x = Dense(16*16*32, activation='relu')(x)
+x = Dense(16*16*num_filters, activation='relu')(x)
 
-x = Reshape([16, 16, 32])(x)
+x = Reshape([16, 16, num_filters])(x)
 
-x = Conv2DTranspose(filters=32,
-                    kernel_size=(2, 2),
+x = Conv2DTranspose(filters=num_filters,
+                    kernel_size=num_conv,
                     activation='relu',
                     strides=1,
                     padding='same')(x)
 
-x = Conv2DTranspose(filters=32,
-                    kernel_size=(2, 2),
+x = Conv2DTranspose(filters=num_filters,
+                    kernel_size=num_conv,
                     activation='relu',
                     strides=1,
                     padding='same')(x)
 
-x = Conv2DTranspose(filters=32,
-                    kernel_size=(2, 2),
+x = Conv2DTranspose(filters=num_filters,
+                    kernel_size=(3, 3),
                     activation='relu',
-                    strides=2,
+                    strides=(2, 2),
                     padding='same')(x)
 
 outputs = Conv2D(filters=3,
@@ -124,7 +127,7 @@ if __name__ == '__main__':
 
     vae_loss = K.mean(reconstruction_loss + kl_loss)
     vae.add_loss(vae_loss)
-    vae.compile(optimizer='adagrad')
+    vae.compile(optimizer='rmsprop', loss=None)
     vae.summary()
 
     # train
