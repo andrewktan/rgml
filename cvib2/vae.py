@@ -15,8 +15,8 @@ from vae_utils import *
 
 # (hyper)parameters
 input_shape = (32, 32, 3)
-latent_dim = 512
-epochs = 1
+latent_dim = 16
+epochs = 2
 batch_size = 32
 
 
@@ -32,22 +32,28 @@ image_test = image_test.astype('float32') / 255
 inputs = Input(shape=input_shape, name='encoder_input')
 x = inputs
 
-x = Conv2D(filters=16,
-           kernel_size=(4, 4),
+x = Conv2D(filters=3,
+           kernel_size=(2, 2),
+           activation='relu',
+           strides=1,
+           padding='same')(x)
+
+x = Conv2D(filters=32,
+           kernel_size=(2, 2),
            activation='relu',
            strides=2,
            padding='same')(x)
 
 x = Conv2D(filters=32,
-           kernel_size=(4, 4),
+           kernel_size=(2, 2),
            activation='relu',
-           strides=2,
+           strides=1,
            padding='same')(x)
 
 x = Conv2D(filters=32,
-           kernel_size=(4, 4),
+           kernel_size=(2, 2),
            activation='relu',
-           strides=2,
+           strides=1,
            padding='same')(x)
 
 x = Flatten()(x)
@@ -64,31 +70,36 @@ encoder.summary()
 
 # decoder
 latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-x = Dense(500, activation='relu')(latent_inputs)
+x = Dense(128, activation='relu')(latent_inputs)
 
-x = Dense(4*4*32, activation='relu')(x)
+x = Dense(16*16*32, activation='relu')(x)
 
-x = Reshape([4, 4, 32])(x)
+x = Reshape([16, 16, 32])(x)
 
 x = Conv2DTranspose(filters=32,
-                    kernel_size=(4, 4),
+                    kernel_size=(2, 2),
+                    activation='relu',
+                    strides=1,
+                    padding='same')(x)
+
+x = Conv2DTranspose(filters=32,
+                    kernel_size=(2, 2),
+                    activation='relu',
+                    strides=1,
+                    padding='same')(x)
+
+x = Conv2DTranspose(filters=32,
+                    kernel_size=(2, 2),
                     activation='relu',
                     strides=2,
                     padding='same')(x)
 
-x = Conv2DTranspose(filters=16,
-                    kernel_size=(4, 4),
-                    activation='relu',
-                    strides=2,
-                    padding='same')(x)
-
-
-outputs = Conv2DTranspose(filters=3,
-                          kernel_size=(4, 4),
-                          strides=2,
-                          activation='sigmoid',
-                          padding='same',
-                          name='decoder_output')(x)
+outputs = Conv2D(filters=3,
+                 kernel_size=(2, 2),
+                 strides=1,
+                 activation='sigmoid',
+                 padding='same',
+                 name='decoder_output')(x)
 
 decoder = Model(latent_inputs, outputs, name='decoder')
 decoder.summary()
@@ -103,6 +114,8 @@ vae = Model(inputs, outputs, name='vae')
 if __name__ == '__main__':
 
     # cost function
+    # reconstruction_loss = mse(K.flatten(inputs),
+                              # K.flatten(outputs)) * 32**2
     reconstruction_loss = binary_crossentropy(K.flatten(inputs),
                                               K.flatten(outputs)) * 32**2
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
@@ -120,9 +133,17 @@ if __name__ == '__main__':
             batch_size=batch_size,
             validation_data=(image_test, None))
 
-    vae.save_weights('vae_cnn_cifar.h5')
+    # vae.load_weights('vae_cnn_cifar.h5')
 
+    for idx in range(5):
+        img = vae.predict(
+            np.reshape(
+                image_test[idx, :, :, :], [1, 32, 32, 3]
+            )
+        )
+        plt.imshow(np.concatenate((np.squeeze(img), image_test[idx, :, :, :])))
+        plt.show()
     # plot_results((encoder, decoder),
-    # (image_test, label_test),
-    # batch_size=batch_size,
-    # model_name='vae')
+        # (image_test, label_test),
+        # batch_size=batch_size,
+        # model_name='vae')
