@@ -29,13 +29,13 @@ if __name__ == '__main__':
 
     input_shape = (32, 32, 3)
     hidden_dim = 32
+    latent_dim = 256
     intermediate_dim = 128
-    latent_dim = 16
     num_filters = 32
     num_conv = 3
     epochs = args.epochs
-    batch_size = 128
     beta = args.beta
+    batch_size = 128
 
     # import dataset
     (image_train, label_train), (image_test, label_test) = cifar10.load_data()
