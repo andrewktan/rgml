@@ -51,7 +51,7 @@ def VAE_Encoder(inputs,
     return Model(inputs, [z_mean, z_log_var, z], name=name)
 
 
-def patch_encoder(inputs,
+def Patch_Encoder(inputs,
                   hidden_dim=32,
                   intermediate_dim=128,
                   latent_dim=16,

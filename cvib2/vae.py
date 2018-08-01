@@ -19,16 +19,17 @@ if __name__ == '__main__':
     parser.add_argument('--optimizer', type=str, default='rmsprop')
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--load', dest='train', action='store_false')
-    parser.set_defaults(train=True)
-    parser.add_argument('--show_graphs', type=bool, default=False)
+    parser.add_argument('--show_graphs', dest='show_graphs',
+                        action='store_true')
+    parser.set_defaults(train=True, show_graphs=False)
 
     args = parser.parse_args()
 
     # (hyper)parameters
     input_shape = (32, 32, 3)
-    num_conv = 3
-    intermediate_dim = 128
-    latent_dim = 16
+    intermediate_dim = 256
+    latent_dim = 128
+    num_conv = 4
     num_filters = 32
     epochs = args.epochs
     batch_size = 128
@@ -91,14 +92,14 @@ if __name__ == '__main__':
                 batch_size=batch_size,
                 validation_data=(image_test, None))
 
-        vae.save_weights('store/vae_cifar_ld%03d_e%03d.h5' %
+        vae.save_weights("store/vae_cifar_ld%03d_e%03d.h5" %
                          (latent_dim, epochs))
-        encoder.save_weights('store/enc_cifar_ld%03d_e%03d.h5' %
+        encoder.save_weights("store/enc_cifar_ld%03d_e%03d.h5" %
                              (latent_dim, epochs))
-        decoder.save_weights('store/dec_cifar_ld%03d_e%03d.h5' %
+        decoder.save_weights("store/dec_cifar_ld%03d_e%03d.h5" %
                              (latent_dim, epochs))
     else:
-        vae.load_weights('store/vae_cifar_ld%03d_e%03d.h5' %
+        vae.load_weights("store/vae_cifar_ld%03d_e%03d.h5" %
                          (latent_dim, epochs))
 
     for idx in range(10):
