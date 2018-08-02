@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser(description='patch_encoder for CIFAR-10')
     parser.add_argument('--epochs', type=int, default=500)
-    parser.add_argument('--beta', type=int, default=10)
+    parser.add_argument('--beta', type=int, default=1)
     parser.add_argument('--optimizer', type=str, default='rmsprop')
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--load', dest='train', action='store_false')
@@ -29,10 +29,10 @@ if __name__ == '__main__':
 
     input_shape = (32, 32, 3)
     hidden_dim = 32
-    latent_dim = 256
-    intermediate_dim = 128
+    latent_dim = 128
+    intermediate_dim = 256
     num_filters = 32
-    num_conv = 3
+    num_conv = 4
     epochs = args.epochs
     beta = args.beta
     batch_size = 128
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                              (latent_dim, beta, epochs))
     else:
         encoder.load_weights("store/penc_cifar_ld%03d_b%03d_e%03d.h5" %
-                             (latent_dim, betas, epochs))
+                             (latent_dim, beta, epochs))
 
     for idx in range(10):
         img = imaginer.predict(

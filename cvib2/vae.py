@@ -27,9 +27,9 @@ if __name__ == '__main__':
 
     # (hyper)parameters
     input_shape = (32, 32, 3)
-    intermediate_dim = 256
-    latent_dim = 128
-    num_conv = 4
+    intermediate_dim = 128
+    latent_dim = 16
+    num_conv = 3
     num_filters = 32
     epochs = args.epochs
     batch_size = 128
