@@ -19,17 +19,18 @@ if __name__ == '__main__':
     parser.add_argument('--optimizer', type=str, default='rmsprop')
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--load', dest='train', action='store_false')
+    parser.add_argument('--grayscale', dest='grayscale', action='store_true')
     parser.add_argument('--show_graphs', dest='show_graphs',
                         action='store_true')
-    parser.set_defaults(train=True, show_graphs=False)
+    parser.set_defaults(train=True, show_graphs=False, grayscale=False)
 
     args = parser.parse_args()
 
     # (hyper)parameters
-    input_shape = (32, 32, 3)
-    intermediate_dim = 128
-    latent_dim = 16
-    num_conv = 3
+    input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
+    intermediate_dim = 256
+    latent_dim = 128
+    num_conv = 4
     num_filters = 32
     epochs = args.epochs
     batch_size = 128
@@ -37,13 +38,20 @@ if __name__ == '__main__':
     # import dataset
     (image_train, label_train), (image_test, label_test) = cifar10.load_data()
 
-    image_train = np.reshape(image_train, [-1, 32, 32, 3])
-    image_test = np.reshape(image_test, [-1, 32, 32, 3])
+    image_train = np.reshape(image_train, (-1, 32, 32, 3))
+    image_test = np.reshape(image_test, (-1, 32, 32, 3))
     image_train = image_train.astype('float32') / 255
     image_test = image_test.astype('float32') / 255
 
+    if args.grayscale:
+        image_train = np.reshape(
+            np.mean(image_train, axis=-1), (-1,) + input_shape)
+        image_test = np.reshape(
+            np.mean(image_test, axis=-1), (-1,) + input_shape)
+
     # encoder
-    inputs = Input(shape=[32, 32, 3], name='encoder_input')
+    inputs = Input(shape=input_shape, name='encoder_input')
+
     encoder = VAE_Encoder(inputs,
                           latent_dim=latent_dim,
                           intermediate_dim=intermediate_dim,
@@ -58,7 +66,8 @@ if __name__ == '__main__':
                           latent_dim=latent_dim,
                           intermediate_dim=intermediate_dim,
                           num_filters=num_filters,
-                          num_conv=num_conv)
+                          num_conv=num_conv,
+                          grayscale=args.grayscale)
 
     decoder.summary()
 
@@ -105,8 +114,13 @@ if __name__ == '__main__':
     for idx in range(10):
         img = vae.predict(
             np.reshape(
-                image_test[idx, :, :, :], [1, 32, 32, 3]
+                image_test[idx], (1,) + input_shape
             )
         )
-        plt.imshow(np.concatenate((np.squeeze(img), image_test[idx, :, :, :])))
+        plt.imshow(np.concatenate((np.squeeze(img),
+                                   np.squeeze(image_test[idx]))
+                                  ),
+                   cmap=plt.cm.gray
+                   )
+
         plt.show()

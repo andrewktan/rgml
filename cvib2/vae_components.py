@@ -87,6 +87,7 @@ def VAE_Decoder(inputs,
                 intermediate_dim=128,
                 num_filters=32,
                 num_conv=4,
+                grayscale=False,
                 name='decoder'):
 
     # build decoder
@@ -110,7 +111,7 @@ def VAE_Decoder(inputs,
                               activation='relu',
                               strides=2,
                               padding='same'),
-              Conv2DTranspose(filters=3,
+              Conv2DTranspose(filters=1 if grayscale else 3,
                               kernel_size=num_conv,
                               activation='sigmoid',
                               strides=1,

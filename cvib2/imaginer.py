@@ -17,9 +17,10 @@ if __name__ == '__main__':
     parser.add_argument('--optimizer', type=str, default='rmsprop')
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--load', dest='train', action='store_false')
+    parser.add_argument('--grayscale', dest='grayscale', action='store_true')
     parser.add_argument('--show_graphs', dest='show_graphs',
                         action='store_true')
-    parser.set_defaults(train=True, show_graphs=False)
+    parser.set_defaults(train=True, show_graphs=False, grayscale=False)
 
     args = parser.parse_args()
 
@@ -27,7 +28,7 @@ if __name__ == '__main__':
     r = 15
     c = 15
 
-    input_shape = (32, 32, 3)
+    input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
     hidden_dim = 32
     latent_dim = 128
     intermediate_dim = 256
@@ -45,10 +46,17 @@ if __name__ == '__main__':
     image_train = image_train.astype('float32') / 255
     image_test = image_test.astype('float32') / 255
 
-    # patch encoder
-    inputs = Input(shape=[32, 32, 3], name='encoder_input')
+    if args.grayscale:
+        image_train = np.reshape(
+            np.mean(image_train, axis=-1), (-1,) + input_shape)
+        image_test = np.reshape(
+            np.mean(image_test, axis=-1), (-1,) + input_shape)
 
-    x = Lambda(lambda x: x[:, r:r+4, c:c+4, :], output_shape=(4, 4, 3))(inputs)
+    # patch encoder
+    inputs = Input(shape=input_shape, name='encoder_input')
+
+    x = Lambda(lambda x: x[:, r:r+4, c:c+4, :],
+               output_shape=(4, 4, input_shape[2]))(inputs)
 
     encoder = Patch_Encoder(inputs,
                             hidden_dim=hidden_dim,
@@ -63,7 +71,8 @@ if __name__ == '__main__':
                           latent_dim=latent_dim,
                           intermediate_dim=intermediate_dim,
                           num_filters=num_filters,
-                          num_conv=num_conv)
+                          num_conv=num_conv,
+                          grayscale=args.grayscale)
 
     decoder.summary()
 
@@ -111,8 +120,13 @@ if __name__ == '__main__':
     for idx in range(10):
         img = imaginer.predict(
             np.reshape(
-                image_test[idx, :, :, :], [1, 32, 32, 3]
+                image_test[idx], (1,) + input_shape
             )
         )
-        plt.imshow(np.concatenate((np.squeeze(img), image_test[idx, :, :, :])))
+        plt.imshow(np.concatenate((np.squeeze(img),
+                                   np.squeeze(image_test[idx]))
+                                  ),
+                   cmap=plt.cm.gray
+                   )
+
         plt.show()
