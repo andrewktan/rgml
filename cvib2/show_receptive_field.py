@@ -22,8 +22,10 @@ if __name__ == '__main__':
     # (hyper)parameters
     r = 15
     c = 15
+    sz = 12
+
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 256
+    hidden_dim = 1024
     latent_dim = 128
     intermediate_dim = 256
     epochs = args.epochs
@@ -48,8 +50,8 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    x = Lambda(lambda x: x[:, r:r+4, c:c+4, :],
-               output_shape=(4, 4) + (input_shape[2],))(inputs)
+    x = Lambda(lambda x: x[:, r:r+sz, c:c+sz, :],
+               output_shape=(sz, sz) + (input_shape[2],))(inputs)
 
     encoder = Patch_Encoder(inputs,
                             hidden_dim=hidden_dim,
@@ -69,11 +71,11 @@ if __name__ == '__main__':
     # cluster
     cluster_id = KMeans(n_clusters=num_clusters).fit(latents).labels_
 
-    receptive_fields = np.zeros((4, 4*num_clusters, input_shape[2]))
+    receptive_fields = np.zeros((sz, sz*num_clusters, input_shape[2]))
 
     for cluster in range(num_clusters):
-        receptive_fields[:, 4*cluster:4*cluster+4] = np.mean(
-            image_test[cluster_id == cluster, r:r+4, c:c+4, :],
+        receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+            image_test[cluster_id == cluster, r:r+sz, c:c+sz, :],
             axis=0)
 
         print(np.sum(cluster_id == cluster))

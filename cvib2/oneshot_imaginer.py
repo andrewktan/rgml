@@ -25,12 +25,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
-    r = 9
-    c = 9
-    sz = 12
+    r = 0
+    c = 0
+    sz = 6
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 256
+    hidden_dim = 512
     latent_dim = 128
     intermediate_dim = 256
     num_filters = 32
