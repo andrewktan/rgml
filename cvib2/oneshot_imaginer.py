@@ -25,11 +25,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
-    r = 15
-    c = 15
+    r = 9
+    c = 9
+    sz = 12
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 32
+    hidden_dim = 256
     latent_dim = 128
     intermediate_dim = 256
     num_filters = 32
@@ -55,8 +56,8 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    x = Lambda(lambda x: x[:, r:r+4, c:c+4, :],
-               output_shape=(4, 4, input_shape[2]))(inputs)
+    x = Lambda(lambda x: x[:, r:r+sz, c:c+sz, :],
+               output_shape=(sz, sz, input_shape[2]))(inputs)
 
     encoder = Patch_Encoder(inputs,
                             hidden_dim=hidden_dim,

@@ -23,11 +23,11 @@ if __name__ == '__main__':
     r = 15
     c = 15
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 32
+    hidden_dim = 256
     latent_dim = 128
+    intermediate_dim = 256
     epochs = args.epochs
     beta = args.beta
-    intermediate_dim = 256
 
     num_clusters = args.num_clusters
 
