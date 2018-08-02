@@ -100,9 +100,6 @@ if __name__ == '__main__':
         plot_model(imaginer, to_file='out/imaginer.png', show_shapes=True)
 
     # train
-    decoder.load_weights("store/dec_cifar_ld%03d.h5" %
-                         (latent_dim))
-
     if args.train:
         imaginer.fit(image_train,
                      epochs=epochs,
@@ -114,8 +111,8 @@ if __name__ == '__main__':
         encoder.save_weights("store/penc_cifar_ld%03d_b%03d.h5" %
                              (latent_dim, beta))
     else:
-        encoder.load_weights("store/penc_cifar_ld%03d_b%03d.h5" %
-                             (latent_dim, beta))
+        imaginer.load_weights("store/imag_cifar_ld%03d_b%03d.h5" %
+                              (latent_dim, beta))
 
     for idx in range(10):
         img = imaginer.predict(

@@ -76,6 +76,8 @@ if __name__ == '__main__':
             image_test[cluster_id == cluster, r:r+4, c:c+4, :],
             axis=0)
 
+        print(np.sum(cluster_id == cluster))
+
     plt.imshow(np.squeeze(receptive_fields),
-               cmap=plt.cm.gray)
+               cmap=plt.cm.gray, vmin=0, vmax=1)
     plt.show()
