@@ -80,7 +80,7 @@ if __name__ == '__main__':
     reconstruction_loss = binary_crossentropy(K.flatten(inputs),
                                               K.flatten(outputs)) * 32**2
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
-    kl_loss = K.sum(kl_loss, axis=-1)
+    kl_loss = K.mean(kl_loss, axis=-1)
     kl_loss *= -0.5
 
     vae_loss = K.mean(reconstruction_loss + kl_loss)
