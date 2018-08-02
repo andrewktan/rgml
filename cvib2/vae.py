@@ -16,7 +16,7 @@ if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser(description='VAE for CIFAR-10')
     parser.add_argument('--epochs', type=int, default=20)
-    parser.add_argument('--optimizer', type=str, default='rmsprop')
+    parser.add_argument('--optimizer', type=str, default='adam')
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--load', dest='train', action='store_false')
     parser.add_argument('--grayscale', dest='grayscale', action='store_true')

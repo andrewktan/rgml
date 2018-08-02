@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='patch_encoder for CIFAR-10')
     parser.add_argument('--epochs', type=int, default=500)
     parser.add_argument('--beta', type=int, default=1)
-    parser.add_argument('--optimizer', type=str, default='rmsprop')
+    parser.add_argument('--optimizer', type=str, default='adam')
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--load', dest='train', action='store_false')
     parser.add_argument('--grayscale', dest='grayscale', action='store_true')
