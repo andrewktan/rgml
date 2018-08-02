@@ -56,8 +56,8 @@ if __name__ == '__main__':
                             intermediate_dim=intermediate_dim,
                             latent_dim=latent_dim)
 
-    encoder.load_weights("store/penc_cifar_ld%03d_b%03d_e%03d.h5" %
-                         (latent_dim, beta, epochs))
+    encoder.load_weights("store/penc_cifar_ld%03d_b%03d.h5" %
+                         (latent_dim, beta))
 
     # encoder
     latents = encoder.predict(

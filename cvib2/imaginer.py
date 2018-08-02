@@ -61,7 +61,8 @@ if __name__ == '__main__':
     encoder = Patch_Encoder(inputs,
                             hidden_dim=hidden_dim,
                             intermediate_dim=intermediate_dim,
-                            latent_dim=latent_dim)
+                            latent_dim=latent_dim,
+                            grayscale=args.grayscale)
 
     encoder.summary()
 
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     reconstruction_loss = binary_crossentropy(K.flatten(inputs),
                                               K.flatten(outputs)) * 32**2
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
-    kl_loss = K.sum(kl_loss, axis=-1)
+    kl_loss = K.mean(kl_loss, axis=-1)
     kl_loss *= -0.5
 
     imag_loss = K.mean(reconstruction_loss + beta * kl_loss)
@@ -100,8 +101,8 @@ if __name__ == '__main__':
         plot_model(imaginer, to_file='out/imaginer.png', show_shapes=True)
 
     # train
-    decoder.load_weights("store/dec_cifar_ld%03d_e%03d.h5" %
-                         (latent_dim, epochs))
+    decoder.load_weights("store/dec_cifar_ld%03d.h5" %
+                         (latent_dim))
 
     if args.train:
         imaginer.fit(image_train,
@@ -109,13 +110,13 @@ if __name__ == '__main__':
                      batch_size=batch_size,
                      validation_data=(image_test, None))
 
-        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_e%03d.h5" %
-                              (latent_dim, beta, epochs))
-        encoder.save_weights("store/penc_cifar_ld%03d_b%03d_e%03d.h5" %
-                             (latent_dim, beta, epochs))
+        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d.h5" %
+                              (latent_dim, beta))
+        encoder.save_weights("store/penc_cifar_ld%03d_b%03d.h5" %
+                             (latent_dim, beta))
     else:
-        encoder.load_weights("store/penc_cifar_ld%03d_b%03d_e%03d.h5" %
-                             (latent_dim, beta, epochs))
+        encoder.load_weights("store/penc_cifar_ld%03d_b%03d.h5" %
+                             (latent_dim, beta))
 
     for idx in range(10):
         img = imaginer.predict(

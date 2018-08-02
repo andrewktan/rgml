@@ -12,9 +12,10 @@ def VAE_Encoder(inputs,
                 intermediate_dim=128,
                 num_filters=32,
                 num_conv=4,
-                name='encoder'):
+                name='encoder',
+                grayscale=False):
     # build encoder
-    layers = [Conv2D(filters=3,
+    layers = [Conv2D(filters=1 if grayscale else 3,
                      kernel_size=2,
                      activation='relu',
                      strides=1,

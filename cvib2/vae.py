@@ -101,15 +101,15 @@ if __name__ == '__main__':
                 batch_size=batch_size,
                 validation_data=(image_test, None))
 
-        vae.save_weights("store/vae_cifar_ld%03d_e%03d.h5" %
-                         (latent_dim, epochs))
-        encoder.save_weights("store/enc_cifar_ld%03d_e%03d.h5" %
-                             (latent_dim, epochs))
-        decoder.save_weights("store/dec_cifar_ld%03d_e%03d.h5" %
-                             (latent_dim, epochs))
+        vae.save_weights("store/vae_cifar_ld%03d.h5" %
+                         (latent_dim))
+        encoder.save_weights("store/enc_cifar_ld%03d.h5" %
+                             (latent_dim))
+        decoder.save_weights("store/dec_cifar_ld%03d.h5" %
+                             (latent_dim))
     else:
-        vae.load_weights("store/vae_cifar_ld%03d_e%03d.h5" %
-                         (latent_dim, epochs))
+        vae.load_weights("store/vae_cifar_ld%03d.h5" %
+                         (latent_dim))
 
     for idx in range(10):
         img = vae.predict(
