@@ -72,6 +72,7 @@ if __name__ == '__main__':
                           num_conv=num_conv,
                           grayscale=args.grayscale)
 
+    decoder.trainable = False
     decoder.summary()
 
     # imaginer model
@@ -98,8 +99,8 @@ if __name__ == '__main__':
         plot_model(imaginer, to_file='out/imaginer.png', show_shapes=True)
 
     # train
-    decoder.load_weights("store/dec_cifar_ld%03d.h5" %
-                         (latent_dim))
+    decoder.load_weights("store/dec_cifar_ld%03d_%d.h5" %
+                         (latent_dim, input_shape[2]))
 
     if args.train:
         imaginer.fit(image_train,
@@ -108,12 +109,12 @@ if __name__ == '__main__':
                      validation_data=(image_test, None))
 
         imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
-                              (latent_dim, beta, 1 if args.grayscale else 3))
+                              (latent_dim, beta, input_shape[2]))
         encoder.save_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
-                             (latent_dim, beta, 1 if args.grayscale else 3))
+                             (latent_dim, beta, input_shape[2]))
     else:
         encoder.load_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
-                             (latent_dim, beta, 1 if args.grayscale else 3))
+                             (latent_dim, beta, input_shape[2]))
 
     for idx in range(10):
         img = imaginer.predict(
