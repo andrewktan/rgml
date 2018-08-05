@@ -27,6 +27,7 @@ if __name__ == '__main__':
     # (hyper)parameters
     r = 15
     c = 15
+    sz = 6
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
     hidden_dim = 32
@@ -55,10 +56,7 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    x = Lambda(lambda x: x[:, r:r+4, c:c+4, :],
-               output_shape=(4, 4, input_shape[2]))(inputs)
-
-    encoder = Patch_Encoder(inputs,
+    encoder = Patch_Encoder(inputs, r, c, sz,
                             hidden_dim=hidden_dim,
                             intermediate_dim=intermediate_dim,
                             latent_dim=latent_dim)
