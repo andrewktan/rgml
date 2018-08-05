@@ -52,14 +52,15 @@ def VAE_Encoder(inputs,
     return Model(inputs, [z_mean, z_log_var, z], name=name)
 
 
-def Patch_Encoder(inputs,
+def Patch_Encoder(inputs, r, c, sz,
                   hidden_dim=32,
                   intermediate_dim=128,
                   latent_dim=16,
                   name='patch_encoder'):
 
     # build encoder
-    layers = [Flatten(),
+    layers = [Lambda(lambda x: x[:, r:r+sz, c:c+sz, :]),
+              Flatten(),
               Dense(hidden_dim,
                     activation='relu'),
               Dense(hidden_dim,

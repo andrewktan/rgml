@@ -1,4 +1,5 @@
 import argparse
+import pickle
 
 import numpy as np
 from keras.datasets import cifar10
@@ -20,13 +21,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
-    r = 15
-    c = 15
-    sz = 12
+    r = 13
+    c = 13
+    sz = 6
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 1024
-    latent_dim = 128
+    hidden_dim = 512
+    latent_dim = 2
     intermediate_dim = 256
     epochs = args.epochs
     beta = args.beta
@@ -41,6 +42,11 @@ if __name__ == '__main__':
     image_train = image_train.astype('float32') / 255
     image_test = image_test.astype('float32') / 255
 
+    # with open('/Users/andrew/Documents/rgml/test_data/split/data.pkl', 'rb') as f:
+    #     image_train = np.reshape(pickle.load(f)['data'], [-1, 32, 32, 1])
+
+    # image_test = image_train
+
     if args.grayscale:
         image_train = np.reshape(
             np.mean(image_train, axis=-1), (-1,) + input_shape)
@@ -53,13 +59,13 @@ if __name__ == '__main__':
     x = Lambda(lambda x: x[:, r:r+sz, c:c+sz, :],
                output_shape=(sz, sz) + (input_shape[2],))(inputs)
 
-    encoder = Patch_Encoder(inputs,
+    encoder = Patch_Encoder(inputs, r, c, sz,
                             hidden_dim=hidden_dim,
                             intermediate_dim=intermediate_dim,
                             latent_dim=latent_dim)
 
-    encoder.load_weights("store/penc_cifar_ld%03d_b%03d.h5" %
-                         (latent_dim, beta))
+    encoder.load_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
+                         (latent_dim, beta, 1 if args.grayscale else 3))
 
     # encoder
     latents = encoder.predict(
@@ -81,5 +87,5 @@ if __name__ == '__main__':
         print(np.sum(cluster_id == cluster))
 
     plt.imshow(np.squeeze(receptive_fields),
-               cmap=plt.cm.gray, vmin=0, vmax=1)
+               cmap=plt.cm.gray)
     plt.show()

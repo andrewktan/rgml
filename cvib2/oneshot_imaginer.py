@@ -1,4 +1,5 @@
 import argparse
+import pickle
 
 import numpy as np
 from keras.datasets import cifar10
@@ -25,13 +26,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
-    r = 0
-    c = 0
+    r = 13
+    c = 13
     sz = 6
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
     hidden_dim = 512
-    latent_dim = 128
+    latent_dim = 2
     intermediate_dim = 256
     num_filters = 32
     num_conv = 4
@@ -47,6 +48,11 @@ if __name__ == '__main__':
     image_train = image_train.astype('float32') / 255
     image_test = image_test.astype('float32') / 255
 
+    # with open('/Users/andrew/Documents/rgml/test_data/split/data.pkl', 'rb') as f:
+    # image_train = np.reshape(pickle.load(f)['data'], [-1, 32, 32, 1])
+
+    # image_test = image_train
+
     if args.grayscale:
         image_train = np.reshape(
             np.mean(image_train, axis=-1), (-1,) + input_shape)
@@ -56,10 +62,7 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    x = Lambda(lambda x: x[:, r:r+sz, c:c+sz, :],
-               output_shape=(sz, sz, input_shape[2]))(inputs)
-
-    encoder = Patch_Encoder(inputs,
+    encoder = Patch_Encoder(inputs, r, c, sz,
                             hidden_dim=hidden_dim,
                             intermediate_dim=intermediate_dim,
                             latent_dim=latent_dim)
@@ -107,13 +110,13 @@ if __name__ == '__main__':
                      batch_size=batch_size,
                      validation_data=(image_test, None))
 
-        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d.h5" %
-                              (latent_dim, beta))
-        encoder.save_weights("store/penc_cifar_ld%03d_b%03d.h5" %
-                             (latent_dim, beta))
+        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
+                              (latent_dim, beta, 1 if args.grayscale else 3))
+        encoder.save_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
+                             (latent_dim, beta, 1 if args.grayscale else 3))
     else:
-        imaginer.load_weights("store/imag_cifar_ld%03d_b%03d.h5" %
-                              (latent_dim, beta))
+        imaginer.load_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
+                              (latent_dim, beta, 1 if args.grayscale else 3))
 
     for idx in range(10):
         img = imaginer.predict(
