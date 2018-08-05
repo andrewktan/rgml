@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
     hidden_dim = 512
-    latent_dim = 2
+    latent_dim = 128
     intermediate_dim = 256
     epochs = args.epochs
     beta = args.beta
