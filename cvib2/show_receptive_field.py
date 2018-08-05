@@ -65,7 +65,7 @@ if __name__ == '__main__':
                             latent_dim=latent_dim)
 
     encoder.load_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
-                         (latent_dim, beta, 1 if args.grayscale else 3))
+                         (latent_dim, beta, input_shape[2]))
 
     # encoder
     latents = encoder.predict(

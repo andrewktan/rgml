@@ -111,12 +111,12 @@ if __name__ == '__main__':
                      validation_data=(image_test, None))
 
         imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
-                              (latent_dim, beta, 1 if args.grayscale else 3))
+                              (latent_dim, beta, input_shape[2]))
         encoder.save_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
-                             (latent_dim, beta, 1 if args.grayscale else 3))
+                             (latent_dim, beta, input_shape[2]))
     else:
         imaginer.load_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
-                              (latent_dim, beta, 1 if args.grayscale else 3))
+                              (latent_dim, beta, input_shape[2]))
 
     for idx in range(10):
         img = imaginer.predict(

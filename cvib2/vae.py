@@ -83,7 +83,7 @@ if __name__ == '__main__':
     kl_loss = K.mean(kl_loss, axis=-1)
     kl_loss *= -0.5
 
-    vae_loss = K.mean(reconstruction_loss)# + kl_loss)
+    vae_loss = K.mean(reconstruction_loss)  # + kl_loss)
     vae.add_loss(vae_loss)
     vae.compile(optimizer=args.optimizer, loss=None)
     vae.summary()
@@ -102,14 +102,14 @@ if __name__ == '__main__':
                 validation_data=(image_test, None))
 
         vae.save_weights("store/vae_cifar_ld%03d_%d.h5" %
-                         (latent_dim, 1 if args.grayscale else 3))
+                         (latent_dim, input_shape[2]))
         encoder.save_weights("store/enc_cifar_ld%03d_%d.h5" %
-                             (latent_dim, 1 if args.grayscale else 3))
+                             (latent_dim, input_shape[2]))
         decoder.save_weights("store/dec_cifar_ld%03d_%d.h5" %
-                             (latent_dim, 1 if args.grayscale else 3))
+                             (latent_dim, input_shape[2]))
     else:
         vae.load_weights("store/vae_cifar_ld%03d_%d.h5" %
-                         (latent_dim, 1 if args.grayscale else 3))
+                         (latent_dim, input_shape[2]))
 
     for idx in range(10):
         img = vae.predict(
