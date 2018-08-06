@@ -11,6 +11,8 @@ from vae_components import *
 if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser(description='patch_encoder for CIFAR-10')
+    parser.add_argument('r', type=int)
+    parser.add_argument('c', type=int)
     parser.add_argument('--num_clusters', type=int, default=2)
     parser.add_argument('--epochs', type=int, default=500)
     parser.add_argument('--beta', type=int, default=1)
@@ -21,8 +23,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
-    r = 13
-    c = 13
+    r = args.r
+    c = args.c
     sz = 6
 
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
@@ -64,8 +66,8 @@ if __name__ == '__main__':
                             intermediate_dim=intermediate_dim,
                             latent_dim=latent_dim)
 
-    encoder.load_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
-                         (latent_dim, beta, input_shape[2]))
+    encoder.load_weights("store/penc_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                         (latent_dim, beta, r, c, input_shape[2]))
 
     # encoder
     latents = encoder.predict(
