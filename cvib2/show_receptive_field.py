@@ -1,4 +1,3 @@
-import argparse
 import pickle
 
 import numpy as np
@@ -10,29 +9,6 @@ from parameters import *
 from vae_components import *
 
 if __name__ == '__main__':
-    # get arguments
-    parser = argparse.ArgumentParser(description='patch_encoder for CIFAR-10')
-    parser.add_argument('r', type=int)
-    parser.add_argument('c', type=int)
-    parser.add_argument('--num_clusters', type=int, default=2)
-    parser.add_argument('--epochs', type=int, default=500)
-    parser.add_argument('--beta', type=int, default=1)
-    parser.add_argument('--grayscale', dest='grayscale', action='store_true')
-
-    parser.set_defaults(grayscale=False)
-
-    args = parser.parse_args()
-
-    # (hyper)parameters
-    input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    r = args.r
-    c = args.c
-
-    epochs = args.epochs
-    beta = args.beta
-
-    num_clusters = args.num_clusters
-
     # import dataset
     (image_train, label_train), (image_test, label_test) = cifar10.load_data()
 

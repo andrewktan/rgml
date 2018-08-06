@@ -1,5 +1,3 @@
-import argparse
-
 import numpy as np
 from keras import backend as K
 from keras.datasets import cifar10
@@ -14,24 +12,7 @@ from vae_components import *
 from vae_utils import *
 
 if __name__ == '__main__':
-    # get arguments
-    parser = argparse.ArgumentParser(description='VAE for CIFAR-10')
-    parser.add_argument('--epochs', type=int, default=20)
-    parser.add_argument('--optimizer', type=str, default='adam')
-    parser.add_argument('--train', dest='train', action='store_true')
-    parser.add_argument('--load', dest='train', action='store_false')
-    parser.add_argument('--grayscale', dest='grayscale', action='store_true')
-    parser.add_argument('--show_graphs', dest='show_graphs',
-                        action='store_true')
-    parser.set_defaults(train=True, show_graphs=False, grayscale=False)
-
-    args = parser.parse_args()
-
-    # (hyper)parameters
-    input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    epochs = args.epochs
-
-    # import dataset
+   # import dataset
     (image_train, label_train), (image_test, label_test) = cifar10.load_data()
 
     image_train = np.reshape(image_train, (-1, 32, 32, 3))
