@@ -9,6 +9,7 @@ from keras.losses import binary_crossentropy, mse
 from keras.models import Model
 from keras.utils import plot_model
 
+from parameters import *
 from vae_components import *
 from vae_utils import *
 
@@ -28,12 +29,7 @@ if __name__ == '__main__':
 
     # (hyper)parameters
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    intermediate_dim = 256
-    latent_dim = 128
-    num_conv = 4
-    num_filters = 32
     epochs = args.epochs
-    batch_size = 128
 
     # import dataset
     (image_train, label_train), (image_test, label_test) = cifar10.load_data()

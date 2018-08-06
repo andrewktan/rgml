@@ -6,6 +6,7 @@ from keras.datasets import cifar10
 from keras.layers import Lambda
 from sklearn.cluster import KMeans
 
+from parameters import *
 from vae_components import *
 
 if __name__ == '__main__':
@@ -23,14 +24,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
+    input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
     r = args.r
     c = args.c
-    sz = 6
 
-    input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 512
-    latent_dim = 128
-    intermediate_dim = 256
     epochs = args.epochs
     beta = args.beta
 

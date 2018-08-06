@@ -7,12 +7,15 @@ from keras.layers import Lambda
 from keras.losses import binary_crossentropy
 from keras.utils import plot_model
 
+from parameters import *
 from vae_components import *
 from vae_utils import *
 
 if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser(description='patch_encoder for CIFAR-10')
+    parser.add_argument('r', type=int)
+    parser.add_argument('c', type=int)
     parser.add_argument('--epochs', type=int, default=500)
     parser.add_argument('--beta', type=int, default=1)
     parser.add_argument('--optimizer', type=str, default='adam')
@@ -26,19 +29,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # (hyper)parameters
-    r = 13
-    c = 13
-    sz = 6
-
     input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
-    hidden_dim = 512
-    latent_dim = 128
-    intermediate_dim = 256
-    num_filters = 32
-    num_conv = 4
+    r = args.r
+    c = args.c
     epochs = args.epochs
     beta = args.beta
-    batch_size = 128
 
     # import dataset
     (image_train, label_train), (image_test, label_test) = cifar10.load_data()
