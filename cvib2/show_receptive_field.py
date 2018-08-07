@@ -31,9 +31,6 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    x = Lambda(lambda x: x[:, r:r+sz, c:c+sz, :],
-               output_shape=(sz, sz) + (input_shape[2],))(inputs)
-
     encoder = Patch_Encoder(inputs, r, c, sz,
                             hidden_dim=hidden_dim,
                             intermediate_dim=intermediate_dim,
@@ -45,7 +42,7 @@ if __name__ == '__main__':
     # encoder
     latents = encoder.predict(
         np.reshape(
-            image_test, [-1, 32, 32, input_shape[2]]
+            image_test, (-1,) + input_shape
         )
     )[0]
 
