@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from keras.datasets import cifar10
 from keras.layers import Lambda
 from keras.losses import binary_crossentropy
@@ -42,7 +43,7 @@ if __name__ == '__main__':
                           num_conv=num_conv,
                           grayscale=args.grayscale)
 
-    decoder.trainable = False
+    # decoder.trainable = False
     decoder.summary()
 
     # imaginer model
@@ -51,8 +52,18 @@ if __name__ == '__main__':
     imaginer = Model(inputs, outputs, name='vae')
 
     # cost function
-    reconstruction_loss = binary_crossentropy(K.flatten(inputs),
-                                              K.flatten(outputs)) * 32**2
+    def mask(x):
+        m = np.ones(input_shape, dtype=np.bool)
+        m[r:r+sz, c:c+sz] = False
+
+        return tf.boolean_mask(x, m, axis=1)
+
+    inputs_masked = Lambda(mask)(inputs)
+    outputs_masked = Lambda(mask)(outputs)
+
+    reconstruction_loss = binary_crossentropy(inputs_masked,
+                                              outputs_masked) * (
+        input_shape[0]*input_shape[1] - sz**2)
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
     kl_loss = K.mean(kl_loss, axis=-1)
     kl_loss *= -0.5
@@ -64,8 +75,10 @@ if __name__ == '__main__':
 
     # plot architecture
     if args.show_graphs:
-        plot_model(encoder, to_file='out/vae_encoder.png', show_shapes=True)
-        plot_model(decoder, to_file='out/vae_decoder.png', show_shapes=True)
+        plot_model(encoder, to_file='out/vae_encoder.png',
+                   show_shapes=True)
+        plot_model(decoder, to_file='out/vae_decoder.png',
+                   show_shapes=True)
         plot_model(imaginer, to_file='out/imaginer.png', show_shapes=True)
 
     # train

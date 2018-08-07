@@ -15,8 +15,11 @@ parser.add_argument('--train', dest='train', action='store_true')
 parser.add_argument('--load', dest='train', action='store_false')
 parser.add_argument('--show_graphs', dest='show_graphs',
                     action='store_true')
+parser.add_argument('--deterministic',
+                    dest='deterministic', action='store_true')
 
-parser.set_defaults(train=True, show_graphs=False, grayscale=True)
+parser.set_defaults(train=True, show_graphs=False,
+                    grayscale=True, deterministic=False)
 
 args = parser.parse_args()
 
@@ -35,8 +38,8 @@ c = args.c
 hidden_dim = 512
 num_filters = 32
 num_conv = 4
-intermediate_dim = 128
-latent_dim = 16
+intermediate_dim = 256
+latent_dim = 64
 
 # training parameters
 batch_size = 128
