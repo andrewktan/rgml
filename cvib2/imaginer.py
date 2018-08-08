@@ -53,10 +53,10 @@ if __name__ == '__main__':
 
     # cost function
     def mask(x):
-        m = np.ones(input_shape, dtype=np.bool)
-        m[r:r+sz, c:c+sz] = False
+        m = np.ones((batch_size,) + input_shape, dtype=np.bool)
+        m[:,r:r+sz, c:c+sz,:] = False
 
-        return tf.boolean_mask(x, m, axis=1)
+        return tf.boolean_mask(x, m)
 
     inputs_masked = Lambda(mask)(inputs)
     outputs_masked = Lambda(mask)(outputs)
