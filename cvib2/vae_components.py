@@ -2,7 +2,7 @@ import numpy as np
 from keras import Model
 from keras import backend as K
 from keras.layers import (Conv2D, Conv2DTranspose, Dense, Flatten, Input,
-                          Lambda, Reshape)
+                          Lambda, Reshape, Softmax)
 
 from vae_utils import *
 
@@ -56,6 +56,7 @@ def Patch_Encoder(inputs, r, c, sz,
                   hidden_dim=32,
                   intermediate_dim=128,
                   latent_dim=16,
+                  deterministic=False,
                   name='patch_encoder'):
 
     # build encoder
@@ -76,12 +77,18 @@ def Patch_Encoder(inputs, r, c, sz,
     for layer in layers:
         x = layer(x)
 
-    z_mean = Dense(latent_dim, name='z_mean')(x)
-    z_log_var = Dense(latent_dim, name='z_log_var')(x)
-    z = Lambda(sampling, output_shape=(latent_dim,),
-               name='z')([z_mean, z_log_var])
+    if deterministic:
+        z_det = Dense(latent_dim, name='z_det')(x)
+        z_det = Softmax()(z_det)
+        return Model(inputs, z_det)
 
-    return Model(inputs, [z_mean, z_log_var, z], name=name)
+    else:
+        z_mean = Dense(latent_dim, name='z_mean')(x)
+        z_log_var = Dense(latent_dim, name='z_log_var')(x)
+        z = Lambda(sampling, output_shape=(latent_dim,),
+                   name='z')([z_mean, z_log_var])
+
+        return Model(inputs, [z_mean, z_log_var, z], name=name)
 
 
 def VAE_Decoder(inputs,
