@@ -1,6 +1,7 @@
 import pickle
 
 import numpy as np
+import tensorflow as tf
 from keras.datasets import cifar10
 from keras.layers import Lambda
 from keras.losses import binary_crossentropy
@@ -62,9 +63,9 @@ if __name__ == '__main__':
                                               K.flatten(outputs)) * 32**2
     kl_loss = z * K.log(z + 1e-12)
     kl_loss = K.sum(kl_loss, axis=-1)
-    kl_loss *= -0.5
+    kl_loss *= 0.5
 
-    imag_loss = K.mean(reconstruction_loss + beta * kl_loss)
+    imag_loss = K.mean(beta * reconstruction_loss - kl_loss)
     imaginer.add_loss(imag_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
