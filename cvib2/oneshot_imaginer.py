@@ -80,17 +80,15 @@ if __name__ == '__main__':
                      epochs=epochs,
                      batch_size=batch_size,
                      validation_data=(image_test, None))
-
-        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
-                              (latent_dim, beta, input_shape[2]))
-        encoder.save_weights("store/penc_cifar_ld%03d_b%03d_%d.h5" %
-                             (latent_dim, beta, input_shape[2]))
+        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                              (latent_dim, beta, r, c, input_shape[2]))
+        encoder.save_weights("store/penc_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                             (latent_dim, beta, r, c, input_shape[2]))
     else:
-        imaginer.load_weights("store/imag_cifar_ld%03d_b%03d_%d.h5" %
-                              (latent_dim, beta, input_shape[2]))
+        imaginer.load_weights("store/imag_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
 
     for idx in range(10):
-        img = imaginer.predict(
+        img=imaginer.predict(
             np.reshape(
                 image_test[idx], (1,) + input_shape
             )
