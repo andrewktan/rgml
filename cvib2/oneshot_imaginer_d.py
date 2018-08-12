@@ -59,8 +59,22 @@ if __name__ == '__main__':
     imaginer = Model(inputs, outputs, name='imaginer_d')
 
     # cost function
-    reconstruction_loss = binary_crossentropy(K.flatten(inputs),
-                                              K.flatten(outputs)) * 32**2
+    def mask(x):
+        m = np.zeros(input_shape, dtype=np.bool)
+        m[r-4:r+sz+4, c-4:c+sz+4, :] = True
+        m[r:r+sz, c:c+sz, :] = False
+
+        x = tf.transpose(x, perm=[1, 2, 3, 0])
+        x = tf.boolean_mask(x, m)
+        x = tf.transpose(x)
+
+        return x
+
+    inputs_masked = Lambda(mask)(inputs)
+    outputs_masked = Lambda(mask)(outputs)
+
+    reconstruction_loss = binary_crossentropy(K.flatten(inputs_masked),
+                                              K.flatten(outputs_masked)) * 32**2
     kl_loss = z * K.log(z + 1e-12)
     kl_loss = K.sum(kl_loss, axis=-1)
     kl_loss *= 0.5
@@ -97,8 +111,9 @@ if __name__ == '__main__':
                 image_test[idx], (1,) + input_shape
             )
         )
-        plt.imshow(np.concatenate((np.squeeze(img),
-                                   np.squeeze(image_test[idx]))
+
+        plt.imshow(np.concatenate((np.squeeze(img[:, r-4:r+sz+4, c-4:c+sz+4, :]),
+                                   np.squeeze(image_test[idx, r-4:r+sz+4, c-4:c+sz+4, :]))
                                   ),
                    cmap=plt.cm.gray
                    )
