@@ -2,7 +2,7 @@ import numpy as np
 from keras import Model
 from keras import backend as K
 from keras.layers import (Conv2D, Conv2DTranspose, Dense, Flatten, Input,
-                          Lambda, Reshape, Softmax)
+                          Lambda, Reshape)
 
 from vae_utils import *
 
@@ -79,7 +79,7 @@ def Patch_Encoder(inputs, r, c, sz,
 
     if deterministic:
         z_det = Dense(latent_dim, name='z_det')(x)
-        z_det = Softmax()(z_det)
+        z_det = Lambda(lambda x: K.softmax(x))(z_det)
         return Model(inputs, z_det)
 
     else:
