@@ -51,12 +51,23 @@ if __name__ == '__main__':
 
     receptive_fields = np.zeros((sz, sz*num_clusters, input_shape[2]))
 
+    # rank clusters and relabel
+    cluster_pop = np.zeros(num_clusters)
+    for cluster in range(num_clusters):
+        cluster_pop[cluster] = np.sum(cluster_id == cluster)
+
+    cluster_map = np.argsort(-cluster_pop)
+
+    print(cluster_map)
+
+    cluster_id = np.apply_along_axis(lambda x: cluster_map[x],
+                                     axis=-1,
+                                     arr=cluster_id)
+
     for cluster in range(num_clusters):
         receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
             image_test[cluster_id == cluster, r:r+sz, c:c+sz, :],
             axis=0)
-
-        print(np.sum(cluster_id == cluster))
 
     plt.imshow(np.squeeze(receptive_fields),
                cmap=plt.cm.gray)

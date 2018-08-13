@@ -8,6 +8,7 @@ parser.add_argument('-c', type=int, default=None)
 parser.add_argument('--num_clusters', type=int, default=10)
 parser.add_argument('--epochs', type=int, default=500)
 parser.add_argument('--beta', type=int, default=1)
+parser.add_argument('--dataset', type=str, default='cifar10')
 parser.add_argument('--grayscale', dest='grayscale', action='store_true')
 parser.add_argument('--colour', dest='grayscale', action='store_false')
 parser.add_argument('--optimizer', type=str, default='adam')
@@ -38,8 +39,8 @@ c = args.c
 hidden_dim = 512
 num_filters = 32
 num_conv = 4
-intermediate_dim = 256
-latent_dim = 64
+intermediate_dim = 128
+latent_dim = 16
 
 # training parameters
 batch_size = 128
