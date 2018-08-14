@@ -2,7 +2,6 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
-from keras.datasets import cifar10
 from keras.layers import Lambda
 from keras.losses import binary_crossentropy
 from keras.utils import plot_model
@@ -12,24 +11,8 @@ from vae_components import *
 from vae_utils import *
 
 if __name__ == '__main__':
-    # import dataset
-    (image_train, label_train), (image_test, label_test) = cifar10.load_data()
-
-    image_train = np.reshape(image_train, [-1, 32, 32, 3])
-    image_test = np.reshape(image_test, [-1, 32, 32, 3])
-    image_train = image_train.astype('float32') / 255
-    image_test = image_test.astype('float32') / 255
-
-    # with open('/Users/andrew/Documents/rgml/test_data/split/data.pkl', 'rb') as f:
-    # image_train = np.reshape(pickle.load(f)['data'], [-1, 32, 32, 1])
-
-    # image_test = image_train
-
-    if args.grayscale:
-        image_train = np.reshape(
-            np.mean(image_train, axis=-1), (-1,) + input_shape)
-        image_test = np.reshape(
-            np.mean(image_test, axis=-1), (-1,) + input_shape)
+    # load datasets
+    (image_train, label_train, image_test, label_test) = load_datasets(args.dataset)
 
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
@@ -44,12 +27,18 @@ if __name__ == '__main__':
 
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='latent_inputs')
-    decoder = VAE_Decoder(latent_inputs,
-                          latent_dim=latent_dim,
-                          intermediate_dim=intermediate_dim,
-                          num_filters=num_filters,
-                          num_conv=num_conv,
-                          grayscale=args.grayscale)
+    if args.dataset == 'cifar10':
+        decoder = VAE_Decoder(latent_inputs,
+                              latent_dim=latent_dim,
+                              intermediate_dim=intermediate_dim,
+                              num_filters=num_filters,
+                              num_conv=num_conv,
+                              num_channels=input_shape[2])
+    else:
+        decoder = VAE_Decoder_NC(latent_inputs,
+                                 latent_dim=latent_dim,
+                                 intermediate_dim=intermediate_dim,
+                                 num_channels=input_shape[2])
 
     decoder.summary()
 
@@ -60,7 +49,8 @@ if __name__ == '__main__':
 
     # cost function
     def mask(x):
-        m = np.ones(input_shape, dtype=np.bool)
+        m = np.zeros(input_shape, dtype=np.bool)
+        m[r-2:r+sz+2, c-2:c+sz+2, :] = False
         m[r:r+sz, c:c+sz, :] = True
 
         x = tf.transpose(x, perm=[1, 2, 3, 0])
@@ -69,16 +59,22 @@ if __name__ == '__main__':
 
         return x
 
-    inputs_masked = Lambda(mask)(inputs)
-    outputs_masked = Lambda(mask)(outputs)
+    # inputs_masked = Lambda(mask)(inputs)
+    # outputs_masked = Lambda(mask)(outputs)
 
-    reconstruction_loss = binary_crossentropy(K.flatten(inputs_masked),
-                                              K.flatten(outputs_masked)) * 32**2
+    # reconstruction_loss = binary_crossentropy(K.flatten(inputs_masked),
+        # K.flatten(outputs_masked)) * 32**2
+
+    reconstruction_loss = inputs * \
+        K.log(outputs + 1e-12) + (1-inputs) * K.log(1-outputs + 1e-12)
+    reconstruction_loss = K.sum(reconstruction_loss, axis=3)
+    reconstruction_loss *= -1
+
     kl_loss = z * K.log(z + 1e-12)
     kl_loss = K.sum(kl_loss, axis=-1)
     kl_loss *= 0.5
 
-    imag_loss = K.mean(beta * reconstruction_loss - kl_loss)
+    imag_loss = K.mean(beta * reconstruction_loss)  # - kl_loss)
     imaginer.add_loss(imag_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
@@ -111,10 +107,16 @@ if __name__ == '__main__':
             )
         )
 
-        plt.imshow(np.concatenate((np.squeeze(img[:, r-4:r+sz+4, c-4:c+sz+4, :]),
-                                   np.squeeze(image_test[idx, r-4:r+sz+4, c-4:c+sz+4, :]))
-                                  ),
-                   cmap=plt.cm.gray
-                   )
-
+        if args.dataset == 'cifar10':
+            plt.imshow(np.concatenate((np.squeeze(img),
+                                       np.squeeze(image_test[idx]))
+                                      ),
+                       cmap=plt.cm.gray
+                       )
+        else:
+            plt.imshow(np.concatenate((np.squeeze(img[:, :, :, 1]),
+                                       np.squeeze(np.argmax(image_test[idx], axis=-1)))
+                                      ),
+                       cmap=plt.cm.gray
+                       )
         plt.show()

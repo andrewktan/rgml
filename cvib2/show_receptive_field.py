@@ -7,28 +7,13 @@ from sklearn.cluster import KMeans
 
 from parameters import *
 from vae_components import *
+from vae_utils import *
 
 if __name__ == '__main__':
-    # import dataset
-    (image_train, label_train), (image_test, label_test) = cifar10.load_data()
+    # load datasets
+    (image_train, label_train, image_test, label_test) = load_datasets(args.dataset)
 
-    image_train = np.reshape(image_train, [-1, 32, 32, 3])
-    image_test = np.reshape(image_test, [-1, 32, 32, 3])
-    image_train = image_train.astype('float32') / 255
-    image_test = image_test.astype('float32') / 255
-
-    # with open('/Users/andrew/Documents/rgml/test_data/split/data.pkl', 'rb') as f:
-    #     image_train = np.reshape(pickle.load(f)['data'], [-1, 32, 32, 1])
-
-    # image_test = image_train
-
-    if args.grayscale:
-        image_train = np.reshape(
-            np.mean(image_train, axis=-1), (-1,) + input_shape)
-        image_test = np.reshape(
-            np.mean(image_test, axis=-1), (-1,) + input_shape)
-
-    # patch encoder
+    # patch encode
     inputs = Input(shape=input_shape, name='encoder_input')
 
     encoder = Patch_Encoder(inputs, r, c, sz,
@@ -49,7 +34,7 @@ if __name__ == '__main__':
     # cluster
     cluster_id = KMeans(n_clusters=num_clusters).fit(latents).labels_
 
-    receptive_fields = np.zeros((sz, sz*num_clusters, input_shape[2]))
+    receptive_fields = np.zeros((sz, sz*num_clusters))
 
     # rank clusters and relabel
     cluster_pop = np.zeros(num_clusters)
@@ -66,9 +51,16 @@ if __name__ == '__main__':
 
     for cluster in range(num_clusters):
         receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
-            image_test[cluster_id == cluster, r:r+sz, c:c+sz, :],
+            image_test[cluster_id == cluster, r:r+sz, c:c+sz, 1] +
+            2*image_test[cluster_id == cluster, r:r+sz, c:c+sz, 2] +
+            3*image_test[cluster_id == cluster, r:r+sz, c:c+sz, 3],
             axis=0)
 
-    plt.imshow(np.squeeze(receptive_fields),
-               cmap=plt.cm.gray)
+    if args.dataset == 'dimer':
+        plt.imshow(np.squeeze(receptive_fields),
+                   cmap=plt.cm.gray)
+    else:
+        plt.imshow(np.squeeze(receptive_fields),
+                   cmap=plt.cm.gray)
+
     plt.show()

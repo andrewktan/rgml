@@ -2,7 +2,7 @@ import numpy as np
 from keras import Model
 from keras import backend as K
 from keras.layers import (Conv2D, Conv2DTranspose, Dense, Flatten, Input,
-                          Lambda, Reshape)
+                          Lambda, Reshape, Softmax)
 
 from vae_utils import *
 
@@ -96,7 +96,7 @@ def VAE_Decoder(inputs,
                 intermediate_dim=128,
                 num_filters=32,
                 num_conv=4,
-                grayscale=False,
+                num_channels=1,
                 name='decoder'):
 
     # build decoder
@@ -120,11 +120,38 @@ def VAE_Decoder(inputs,
                               activation='relu',
                               strides=2,
                               padding='same'),
-              Conv2DTranspose(filters=1 if grayscale else 3,
+              Conv2DTranspose(filters=num_channels,
                               kernel_size=2,
                               activation='sigmoid',
                               strides=1,
                               padding='same')]
+
+    # connect everything
+    x = inputs
+
+    for layer in layers:
+        x = layer(x)
+
+    outputs = x
+
+    return Model(inputs, outputs, name=name)
+
+
+def VAE_Decoder_NC(inputs,
+                   latent_dim=16,
+                   intermediate_dim=128,
+                   num_channels=1,
+                   name='decoder'):
+
+    # build decoder
+    layers = [
+        Dense(intermediate_dim, activation='relu'),
+        Dense(intermediate_dim, activation='relu'),
+        Dense(intermediate_dim, activation='relu'),
+        Dense(32*32*num_channels, activation='relu'),
+        Reshape([32, 32, num_channels]),
+        Softmax(axis=3)
+    ]
 
     # connect everything
     x = inputs

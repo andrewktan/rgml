@@ -28,10 +28,20 @@ args = parser.parse_args()
 #########################
 
 # data parameters
-input_shape = (32, 32, 1) if args.grayscale else (32, 32, 3)
+if args.dataset == 'cifar10':
+    if args.grayscale:
+        input_shape = (32, 32, 1)
+    else:
+        input_shape = (32, 32, 3)
+elif args.dataset == 'ising':
+    input_shape = (32, 32, 2)
+elif args.dataset == 'dimer':
+    input_shape = (32, 32, 4)
+elif args.dataset == 'test':
+    input_shape = (32, 32, 2)
 
 # patch parameters
-sz = 6
+sz = 8
 r = args.r
 c = args.c
 
@@ -40,10 +50,10 @@ hidden_dim = 512
 num_filters = 32
 num_conv = 4
 intermediate_dim = 128
-latent_dim = 16
+latent_dim = 8
 
 # training parameters
-batch_size = 128
+batch_size = 32
 beta = args.beta
 epochs = args.epochs
 

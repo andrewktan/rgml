@@ -12,28 +12,8 @@ from vae_components import *
 from vae_utils import *
 
 if __name__ == '__main__':
-    # import dataset
-    if args.dataset == 'cifar10':
-        (image_train, label_train), (image_test, label_test) = cifar10.load_data()
-
-        image_train = np.reshape(image_train, [-1, 32, 32, 3])
-        image_test = np.reshape(image_test, [-1, 32, 32, 3])
-        image_train = image_train.astype('float32') / 255
-        image_test = image_test.astype('float32') / 255
-
-    elif args.dataset == 'ising':
-        with open('/Users/andrew/Documents/rgml/ising_data/data_0_45.pkl', 'rb') as f:
-            image_train = np.reshape(pickle.load(f)['data'], [-1, 81, 81, 1])
-            image_train = image_train[:, 0:32, 0:32, :]
-            image_train[image_train < 0] = 0
-
-        image_test = image_train
-
-    if args.grayscale:
-        image_train = np.reshape(
-            np.mean(image_train, axis=-1), (-1,) + input_shape)
-        image_test = np.reshape(
-            np.mean(image_test, axis=-1), (-1,) + input_shape)
+    # load datasets
+    (image_train, label_train, image_test, label_test) = load_datasets(args.dataset)
 
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
@@ -47,12 +27,18 @@ if __name__ == '__main__':
 
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-    decoder = VAE_Decoder(latent_inputs,
-                          latent_dim=latent_dim,
-                          intermediate_dim=intermediate_dim,
-                          num_filters=num_filters,
-                          num_conv=num_conv,
-                          grayscale=args.grayscale)
+    if args.dataset == 'cifar10':
+        decoder = VAE_Decoder(latent_inputs,
+                              latent_dim=latent_dim,
+                              intermediate_dim=intermediate_dim,
+                              num_filters=num_filters,
+                              num_conv=num_conv,
+                              num_channels=input_shape[2])
+    else:
+        decoder = VAE_Decoder_NC(latent_inputs,
+                                 latent_dim=latent_dim,
+                                 intermediate_dim=intermediate_dim,
+                                 num_channels=input_shape[2])
 
     decoder.summary()
 
@@ -61,15 +47,19 @@ if __name__ == '__main__':
     outputs = decoder(z)
     imaginer = Model(inputs, outputs, name='vae')
 # cost function
-    reconstruction_loss = binary_crossentropy(K.flatten(inputs),
-                                              K.flatten(outputs)) * \
-        input_shape[0]*input_shape[1]
+    # reconstruction_loss = binary_crossentropy(K.flatten(inputs),
+    #                                           K.flatten(outputs)) * \
+    #     input_shape[0]*input_shape[1]
+    reconstruction_loss = inputs * \
+        K.log(outputs + 1e-12) + (1-inputs) * K.log(1-outputs + 1e-12)
+    reconstruction_loss = K.sum(reconstruction_loss, axis=3)
+    reconstruction_loss *= -1
 
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
     kl_loss = K.mean(kl_loss, axis=-1)
     kl_loss *= 0.5
 
-    imag_loss = K.mean(beta * reconstruction_loss - kl_loss)
+    imag_loss = K.mean(beta * reconstruction_loss)  # - kl_loss)
     imaginer.add_loss(imag_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
@@ -100,10 +90,26 @@ if __name__ == '__main__':
                 image_test[idx], (1,) + input_shape
             )
         )
-        plt.imshow(np.concatenate((np.squeeze(img),
-                                   np.squeeze(image_test[idx]))
-                                  ),
-                   cmap=plt.cm.gray
-                   )
+
+        if args.dataset == 'cifar10':
+            plt.imshow(np.concatenate((np.squeeze(img),
+                                       np.squeeze(image_test[idx]))
+                                      ),
+                       cmap=plt.cm.gray
+                       )
+        elif args.dataset == 'dimer':
+            plt.imshow(np.concatenate((np.squeeze(img[:, :, :, 1] +
+                                                  img[:, :, :, 2]*2 +
+                                                  img[:, :, :, 3]*3),
+                                       np.squeeze(np.argmax(image_test[idx], axis=-1)))
+                                      ),
+                       cmap=plt.cm.gray
+                       )
+        elif args.dataset == 'ising' or args.dataset == 'test':
+            plt.imshow(np.concatenate((np.squeeze(img[:, :, :, 1]),
+                                       np.squeeze(np.argmax(image_test[idx], axis=-1)))
+                                      ),
+                       cmap=plt.cm.gray
+                       )
 
         plt.show()

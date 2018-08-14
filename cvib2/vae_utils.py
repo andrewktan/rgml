@@ -1,8 +1,58 @@
 import os
+import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
 from keras import backend as K
+from keras.datasets import cifar10
+
+from parameters import *
+
+
+def load_datasets(dataset):
+
+    label_train = None
+    label_test = None
+
+    if dataset == 'cifar10':
+        (image_train, label_train), (image_test, label_test) = cifar10.load_data()
+
+        image_train = np.reshape(image_train, [-1, 32, 32, 3])
+        image_test = np.reshape(image_test, [-1, 32, 32, 3])
+        image_train = image_train.astype('float32') / 255
+        image_test = image_test.astype('float32') / 255
+
+        if args.grayscale:
+            image_train = np.reshape(
+                np.mean(image_train, axis=-1), (-1,) + input_shape)
+            image_test = np.reshape(
+                np.mean(image_test, axis=-1), (-1,) + input_shape)
+
+    elif dataset == 'ising':
+        with open('/Users/andrew/Documents/rgml/ising_data/data_0_45.pkl', 'rb') as f:
+            image_train = np.reshape(pickle.load(f)['data'], [-1, 81, 81, 2])
+            image_train = image_train[:, 0:32, 0:32, :]
+            image_train = image_train.astype(np.int32)
+            image_train[image_train < 0] = 0
+
+        image_test = image_train
+
+    elif dataset == 'dimer':
+        with open('/Users/andrew/Documents/rgml/dimer_data/dimer.pkl', 'rb') as f:
+            image_train = np.reshape(pickle.load(
+                f)['data'], [-1, 64, 64, 4])
+            image_train = image_train[:, 0:32, 0:32, :]
+
+        image_test = image_train
+
+    elif dataset == 'test':
+        with open('/Users/andrew/Documents/rgml/test_data/split.pkl', 'rb') as f:
+            image_train = np.reshape(pickle.load(
+                f)['data'], [-1, 32, 32, 2])
+
+        image_test = image_train
+
+    return image_train, label_train, image_test, label_test
 
 
 def sampling(args):
