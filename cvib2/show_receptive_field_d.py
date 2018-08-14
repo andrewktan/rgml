@@ -14,14 +14,13 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    encoder = Patch_Encoder(inputs, r, c, sz,
-                            hidden_dim=hidden_dim,
-                            intermediate_dim=intermediate_dim,
-                            latent_dim=latent_dim,
-                            deterministic=True)
+    encoder = Patch_Encoder_D(inputs, r, c, sz,
+                              hidden_dim=hidden_dim,
+                              intermediate_dim=intermediate_dim,
+                              latent_dim=latent_dim)
 
-    encoder.load_weights("store/penc_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
-                         (latent_dim, beta, r, c, input_shape[2]))
+    encoder.load_weights("store/penc_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                         (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
     # encoder
     latents = encoder.predict(
@@ -47,11 +46,20 @@ if __name__ == '__main__':
         if np.sum(cluster_id == ld) == 0:
             continue
 
-        receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
-            image_test[cluster_id == ld, r:r+sz, c:c+sz, 1] +
-            2*image_test[cluster_id == ld, r:r+sz, c:c+sz, 2] +
-            3*image_test[cluster_id == ld, r:r+sz, c:c+sz, 3],
-            axis=0)
+        if args.dataset == 'cifar10':
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+                image_test[cluster_id == ld, r:r+sz, c:c+sz, :],
+                axis=0)
+        elif args.dataset == 'dimer':
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+                image_test[cluster_id == ld, r:r+sz, c:c+sz, 1] +
+                2*image_test[cluster_id == ld, r:r+sz, c:c+sz, 2] +
+                3*image_test[cluster_id == ld, r:r+sz, c:c+sz, 3],
+                axis=0)
+        elif args.dataset == 'ising' or args.dataset == 'test':
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+                image_test[cluster_id == ld, r:r+sz, c:c+sz, 1],
+                axis=0)
 
         cluster += 1
 

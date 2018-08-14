@@ -17,11 +17,10 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    encoder = Patch_Encoder(inputs, r, c, sz,
-                            hidden_dim=hidden_dim,
-                            intermediate_dim=intermediate_dim,
-                            latent_dim=latent_dim,
-                            deterministic=True)
+    encoder = Patch_Encoder_D(inputs, r, c, sz,
+                              hidden_dim=hidden_dim,
+                              intermediate_dim=intermediate_dim,
+                              latent_dim=latent_dim)
 
     encoder.summary()
 
@@ -49,11 +48,11 @@ if __name__ == '__main__':
 
     # cost function
     def mask(x):
-        m = np.zeros(input_shape, dtype=np.bool)
-        m[r-2:r+sz+2, c-2:c+sz+2, :] = False
-        m[r:r+sz, c:c+sz, :] = True
+        m = np.ones(input_shape[0:2], dtype=np.bool)
+        m[r-2:r+sz+2, c-2:c+sz+2] = True
+        m[r:r+sz, c:c+sz] = False
 
-        x = tf.transpose(x, perm=[1, 2, 3, 0])
+        x = tf.transpose(x, perm=[1, 2, 0])
         x = tf.boolean_mask(x, m)
         x = tf.transpose(x)
 
@@ -68,13 +67,13 @@ if __name__ == '__main__':
     reconstruction_loss = inputs * \
         K.log(outputs + 1e-12) + (1-inputs) * K.log(1-outputs + 1e-12)
     reconstruction_loss = K.sum(reconstruction_loss, axis=3)
+    reconstruction_loss = K.mean(mask(reconstruction_loss))
     reconstruction_loss *= -1
 
-    kl_loss = z * K.log(z + 1e-12)
-    kl_loss = K.sum(kl_loss, axis=-1)
-    kl_loss *= 0.5
+    kl_loss = - 0.5 * K.sum(z * K.log(z + 1e-12), axis=-1)
+    kl_loss = K.mean(kl_loss)
 
-    imag_loss = K.mean(beta * reconstruction_loss)  # - kl_loss)
+    imag_loss = kl_loss + beta * reconstruction_loss
     imaginer.add_loss(imag_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
@@ -92,18 +91,24 @@ if __name__ == '__main__':
                      batch_size=batch_size,
                      validation_data=(image_test, None))
 
-        imaginer.save_weights("store/imag_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
-                              (latent_dim, beta, r, c, input_shape[2]))
-        encoder.save_weights("store/penc_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
-                             (latent_dim, beta, r, c, input_shape[2]))
+        imaginer.save_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                              (args.dataset, latent_dim, beta, r, c, input_shape[2]))
+        encoder.save_weights("store/penc_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                             (args.dataset, latent_dim, beta, r, c, input_shape[2]))
     else:
-        imaginer.load_weights("store/imag_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
-                              (latent_dim, beta, r, c, input_shape[2]))
+        imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                              (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
     for idx in range(10):
         img = imaginer.predict(
             np.reshape(
                 image_test[idx], (1,) + input_shape
+            )
+        )
+
+        latents = encoder.predict(
+            np.reshape(
+                image_test[idx], (1,)+input_shape
             )
         )
 
@@ -113,10 +118,29 @@ if __name__ == '__main__':
                                       ),
                        cmap=plt.cm.gray
                        )
-        else:
+        elif args.dataset == 'dimer':
+            actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
+
+            predicted_image = np.squeeze(img[:, :, :, 1] +
+                                         img[:, :, :, 2]*2 +
+                                         img[:, :, :, 3]*3)
+
+            loss_image = image_test[idx] * \
+                np.log(img[0]) + (1-image_test[idx]+1e-12) * \
+                np.log(1-img[0]+1e-12)
+
+            loss_image *= -1
+            loss_image = np.sum(loss_image, axis=2)
+
+            plt.imshow(np.concatenate((predicted_image, actual_image)),
+                       cmap=plt.cm.gray
+                       )
+        elif args.dataset == 'ising' or args.dataset == 'test':
             plt.imshow(np.concatenate((np.squeeze(img[:, :, :, 1]),
                                        np.squeeze(np.argmax(image_test[idx], axis=-1)))
                                       ),
                        cmap=plt.cm.gray
                        )
+
+        print(np.argmax(latents, axis=-1))
         plt.show()

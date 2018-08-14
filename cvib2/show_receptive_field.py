@@ -1,7 +1,6 @@
 import pickle
 
 import numpy as np
-from keras.datasets import cifar10
 from keras.layers import Lambda
 from sklearn.cluster import KMeans
 
@@ -21,8 +20,8 @@ if __name__ == '__main__':
                             intermediate_dim=intermediate_dim,
                             latent_dim=latent_dim)
 
-    encoder.load_weights("store/penc_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
-                         (latent_dim, beta, r, c, input_shape[2]))
+    encoder.load_weights("store/penc_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                         (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
     # encoder
     latents = encoder.predict(
@@ -50,17 +49,22 @@ if __name__ == '__main__':
                                      arr=cluster_id)
 
     for cluster in range(num_clusters):
-        receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
-            image_test[cluster_id == cluster, r:r+sz, c:c+sz, 1] +
-            2*image_test[cluster_id == cluster, r:r+sz, c:c+sz, 2] +
-            3*image_test[cluster_id == cluster, r:r+sz, c:c+sz, 3],
-            axis=0)
+        if args.dataset == 'cifar10':
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+                image_test[cluster_id == cluster, r:r+sz, c:c+sz, :],
+                axis=0)
+        elif args.dataset == 'dimer':
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+                image_test[cluster_id == cluster, r:r+sz, c:c+sz, 1] +
+                2*image_test[cluster_id == cluster, r:r+sz, c:c+sz, 2] +
+                3*image_test[cluster_id == cluster, r:r+sz, c:c+sz, 3],
+                axis=0)
+        elif args.dataset == 'ising' or args.dataset == 'test':
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
+                image_test[cluster_id == cluster, r:r+sz, c:c+sz, 1],
+                axis=0)
 
-    if args.dataset == 'dimer':
-        plt.imshow(np.squeeze(receptive_fields),
-                   cmap=plt.cm.gray)
-    else:
-        plt.imshow(np.squeeze(receptive_fields),
-                   cmap=plt.cm.gray)
+    plt.imshow(np.squeeze(receptive_fields),
+               cmap=plt.cm.gray)
 
     plt.show()

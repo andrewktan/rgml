@@ -1,8 +1,8 @@
 import numpy as np
 from keras import Model
 from keras import backend as K
-from keras.layers import (Conv2D, Conv2DTranspose, Dense, Flatten, Input,
-                          Lambda, Reshape, Softmax)
+from keras.layers import (BatchNormalization, Conv2D, Conv2DTranspose, Dense,
+                          Flatten, Input, Lambda, Reshape, Softmax)
 
 from vae_utils import *
 
@@ -56,7 +56,6 @@ def Patch_Encoder(inputs, r, c, sz,
                   hidden_dim=32,
                   intermediate_dim=128,
                   latent_dim=16,
-                  deterministic=False,
                   name='patch_encoder'):
 
     # build encoder
@@ -77,18 +76,41 @@ def Patch_Encoder(inputs, r, c, sz,
     for layer in layers:
         x = layer(x)
 
-    if deterministic:
-        z_det = Dense(latent_dim, name='z_det')(x)
-        z_det = Lambda(lambda x: K.softmax(x))(z_det)
-        return Model(inputs, z_det)
+    z_mean = Dense(latent_dim, name='z_mean')(x)
+    z_log_var = Dense(latent_dim, name='z_log_var')(x)
+    z = Lambda(sampling, output_shape=(latent_dim,),
+               name='z')([z_mean, z_log_var])
 
-    else:
-        z_mean = Dense(latent_dim, name='z_mean')(x)
-        z_log_var = Dense(latent_dim, name='z_log_var')(x)
-        z = Lambda(sampling, output_shape=(latent_dim,),
-                   name='z')([z_mean, z_log_var])
+    return Model(inputs, [z_mean, z_log_var, z], name=name)
 
-        return Model(inputs, [z_mean, z_log_var, z], name=name)
+
+def Patch_Encoder_D(inputs, r, c, sz,
+                    hidden_dim=32,
+                    intermediate_dim=128,
+                    latent_dim=16,
+                    name='patch_encoder_d'):
+
+    # build encoder
+    layers = [Lambda(lambda x: x[:, r:r+sz, c:c+sz, :]),
+              Flatten(),
+              Dense(hidden_dim,
+                    activation='elu'),
+              BatchNormalization(),
+              Dense(hidden_dim,
+                    activation='elu'),
+              BatchNormalization(),
+              Dense(latent_dim, activation='elu'),
+              Softmax()]
+
+    # connect everything
+    x = inputs
+
+    for layer in layers:
+        x = layer(x)
+
+    z_det = x
+
+    return Model(inputs, z_det)
 
 
 def VAE_Decoder(inputs,
@@ -145,10 +167,11 @@ def VAE_Decoder_NC(inputs,
 
     # build decoder
     layers = [
-        Dense(intermediate_dim, activation='relu'),
-        Dense(intermediate_dim, activation='relu'),
-        Dense(intermediate_dim, activation='relu'),
-        Dense(32*32*num_channels, activation='relu'),
+        Dense(intermediate_dim, activation='elu'),
+        BatchNormalization(),
+        Dense(intermediate_dim, activation='elu'),
+        BatchNormalization(),
+        Dense(32*32*num_channels, activation='elu'),
         Reshape([32, 32, num_channels]),
         Softmax(axis=3)
     ]
