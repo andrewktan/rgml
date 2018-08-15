@@ -41,7 +41,7 @@ elif args.dataset == 'test':
     input_shape = (32, 32, 2)
 
 # patch parameters
-sz = 5
+sz = 8
 r = args.r
 c = args.c
 
@@ -50,10 +50,10 @@ hidden_dim = 128
 num_filters = 32
 num_conv = 4
 intermediate_dim = 128
-latent_dim = 4
+latent_dim = 8
 
 # training parameters
-batch_size = 16
+batch_size = 128
 beta = args.beta
 epochs = args.epochs
 
