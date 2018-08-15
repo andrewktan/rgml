@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     pz = K.mean(z, axis=0)
 
-    kl_loss = - 0.5 * K.sum(pz * K.log(pz + 1e-12), axis=-1)
+    kl_loss = - K.sum(pz * K.log(pz + 1e-12), axis=-1)
     kl_loss = K.mean(kl_loss)
 
     imag_loss = kl_loss + beta * reconstruction_loss

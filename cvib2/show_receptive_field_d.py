@@ -47,9 +47,10 @@ if __name__ == '__main__':
             continue
 
         if args.dataset == 'cifar10':
-            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
-                image_test[cluster_id == ld, r:r+sz, c:c+sz, :],
-                axis=0)
+            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.squeeze(
+                np.mean(
+                    image_test[cluster_id == ld, r:r+sz, c:c+sz, :],
+                    axis=0))
         elif args.dataset == 'dimer':
             receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
                 image_test[cluster_id == ld, r:r+sz, c:c+sz, 1] +
