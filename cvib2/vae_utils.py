@@ -55,6 +55,19 @@ def load_datasets(dataset):
     return image_train, label_train, image_test, label_test
 
 
+def gumbel_softmax(latent_dim, tau=0.05):
+    def ret(pi):
+        gumbel_softmax_arg = (K.log(pi+K.epsilon())
+                              - K.log(-K.log(K.random_uniform_variable(
+                                  (latent_dim,), 0., 1.)))
+                              )/tau
+        y = K.softmax(K.reshape(gumbel_softmax_arg,
+                                (-1, latent_dim)))
+        return K.reshape(y, (-1, latent_dim))
+
+    return ret
+
+
 def sampling(args):
     z_mean, z_log_var = args
     batch = K.shape(z_mean)[0]

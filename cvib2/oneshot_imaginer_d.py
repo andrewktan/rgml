@@ -2,6 +2,7 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
+from keras.callbacks import Callback
 from keras.layers import Lambda
 from keras.losses import binary_crossentropy
 from keras.utils import plot_model
@@ -43,14 +44,29 @@ if __name__ == '__main__':
 
     # imaginer model
     z = encoder(inputs)
-    outputs = decoder(z)
+
+    # gumbel reparametrization and annealing
+    class AnnealingCallback(Callback):
+        def __init__(self, tau, tau_0=2e-1, decay=2/epochs):
+            self.tau = tau
+            self.tau_0 = tau_0
+            self.decay = decay
+
+        def on_epoch_begin(self, epoch, logs={}):
+            K.set_value(self.tau, self.tau_0/(1+self.decay*epoch))
+
+    tau = K.variable(1.)
+
+    z_samp = Lambda(gumbel_softmax(latent_dim, tau=tau))(z)
+
+    outputs = decoder(z_samp)
     imaginer = Model(inputs, outputs, name='imaginer_d')
 
     # cost function
     def mask(x):
         m = np.ones(input_shape[0:2], dtype=np.bool)
         m[r-2:r+sz+2, c-2:c+sz+2] = True
-        m[r:r+sz, c:c+sz] = False
+        m[r:r+sz, c:c+sz] = True
 
         x = tf.transpose(x, perm=[1, 2, 0])
         x = tf.boolean_mask(x, m)
@@ -65,15 +81,15 @@ if __name__ == '__main__':
         # K.flatten(outputs_masked)) * 32**2
 
     reconstruction_loss = inputs * \
-        K.log(outputs + 1e-12) + (1-inputs) * K.log(1-outputs + 1e-12)
+        K.log(outputs + K.epsilon()) + (1-inputs) * \
+        K.log(1-outputs + K.epsilon())
     reconstruction_loss = K.sum(reconstruction_loss, axis=3)
     reconstruction_loss = K.mean(mask(reconstruction_loss))
     reconstruction_loss *= -1
 
     pz = K.mean(z, axis=0)
 
-    kl_loss = - K.sum(pz * K.log(pz + 1e-12), axis=-1)
-    kl_loss = K.mean(kl_loss)
+    kl_loss = - K.sum(pz * K.log(pz + K.epsilon()), axis=-1)
 
     imag_loss = kl_loss + beta * reconstruction_loss
     imaginer.add_loss(imag_loss)
@@ -91,7 +107,8 @@ if __name__ == '__main__':
         imaginer.fit(image_train,
                      epochs=epochs,
                      batch_size=batch_size,
-                     validation_data=(image_test, None))
+                     validation_data=(image_test, None),
+                     callbacks=[AnnealingCallback(tau)])
 
         imaginer.save_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
@@ -144,5 +161,5 @@ if __name__ == '__main__':
                        cmap=plt.cm.gray
                        )
 
-        print(np.argmax(latents, axis=-1))
+        print(np.argmax(latents))
         plt.show()
