@@ -50,7 +50,7 @@ hidden_dim = 128
 num_filters = 32
 num_conv = 4
 intermediate_dim = 128
-latent_dim = 8
+latent_dim = 32
 
 # training parameters
 batch_size = 128

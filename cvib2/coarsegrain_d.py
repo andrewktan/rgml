@@ -23,13 +23,15 @@ if __name__ == '__main__':
             np.mean(image_test, axis=-1), (-1,) + input_shape)
 
     # load patch encoder grid
-    enc_rows = 5
-    enc_cols = 5
+    enc_rows = 8
+    enc_cols = 8
 
     num_clusters = latent_dim
     eye = np.eye(num_clusters)
-    image_train_cg = np.zeros((image_train.shape[0], 5, 5, num_clusters))
-    image_test_cg = np.zeros((image_test.shape[0], 5, 5, num_clusters))
+    image_train_cg = np.zeros(
+        (image_train.shape[0], enc_rows, enc_cols, num_clusters))
+    image_test_cg = np.zeros(
+        (image_test.shape[0], enc_rows, enc_cols, num_clusters))
 
     for r in range(enc_rows):
         for c in range(enc_cols):
@@ -38,14 +40,13 @@ if __name__ == '__main__':
             inputs = Input(shape=input_shape, name='encoder_input')
 
             # build and load patch encoder
-            encoder = Patch_Encoder(inputs, r*sz + 1, c*sz + 1, sz,
-                                    hidden_dim=hidden_dim,
-                                    intermediate_dim=intermediate_dim,
-                                    latent_dim=latent_dim,
-                                    deterministic=True)
+            encoder = Patch_Encoder_D(inputs, r*sz, c*sz, sz,
+                                      hidden_dim=hidden_dim,
+                                      intermediate_dim=intermediate_dim,
+                                      latent_dim=latent_dim)
 
-            encoder.load_weights("store/penc_cifar_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
-                                 (latent_dim, beta, r*sz + 1, c*sz + 1, input_shape[2]))
+            encoder.load_weights("store/penc_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
+                                 (args.dataset, latent_dim, beta, r*sz, c*sz, input_shape[2]))
 
             # coarsegrain
             latents_train = encoder.predict(

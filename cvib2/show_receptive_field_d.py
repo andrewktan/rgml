@@ -32,19 +32,21 @@ if __name__ == '__main__':
     # cluster
     cluster_id = np.argmax(latents, axis=-1)
 
-    num_clusters = 0
+    cluster_pops = [np.sum(cluster_id == ld) for ld in range(latent_dim)]
+    cluster_pops = np.array(cluster_pops)
+    cluster_order = np.argsort(-cluster_pops)
+    cluster_pops = cluster_pops[cluster_pops > 10]
 
-    for ld in range(latent_dim):
-        if np.sum(cluster_id == ld) > 0:
-            num_clusters += 1
+    num_clusters = cluster_pops.size
 
     receptive_fields = np.zeros((sz, sz*num_clusters))
 
     cluster = 0
-    for ld in range(latent_dim):
+
+    for idx in range(num_clusters):
+        ld = cluster_order[idx]
+
         print(np.sum(cluster_id == ld))
-        if np.sum(cluster_id == ld) == 0:
-            continue
 
         if args.dataset == 'cifar10':
             receptive_fields[:, sz*cluster:sz*cluster+sz] = np.squeeze(

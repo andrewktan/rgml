@@ -172,8 +172,9 @@ def VAE_Decoder_NC(inputs,
         Dense(intermediate_dim, activation='elu'),
         BatchNormalization(),
         Dense(32*32*num_channels, activation='elu'),
+        Dense(32*32*num_channels, activation='sigmoid'),
         Reshape([32, 32, num_channels]),
-        Softmax(axis=3)
+        # Softmax(axis=3)
     ]
 
     # connect everything

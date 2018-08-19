@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='latent_inputs')
-    if args.dataset == 'cifar10':
+    if args.dataset == 'cifar10' and False:
         decoder = VAE_Decoder(latent_inputs,
                               latent_dim=latent_dim,
                               intermediate_dim=intermediate_dim,
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # gumbel reparametrization and annealing
     class AnnealingCallback(Callback):
-        def __init__(self, tau, tau_0=2e-1, decay=2/epochs):
+        def __init__(self, tau, tau_0=1, decay=10/epochs):
             self.tau = tau
             self.tau_0 = tau_0
             self.decay = decay
@@ -64,9 +64,9 @@ if __name__ == '__main__':
 
     # cost function
     def mask(x):
-        m = np.ones(input_shape[0:2], dtype=np.bool)
-        m[r-2:r+sz+2, c-2:c+sz+2] = True
-        m[r:r+sz, c:c+sz] = True
+        m = np.zeros(input_shape[0:2], dtype=np.bool)
+        m[r-5:r+sz+5, c-5:c+sz+5] = True
+        m[r+-2:r+sz+2, c-2:c+sz+2] = False
 
         x = tf.transpose(x, perm=[1, 2, 0])
         x = tf.boolean_mask(x, m)
