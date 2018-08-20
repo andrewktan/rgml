@@ -173,8 +173,7 @@ def VAE_Decoder_NC(inputs,
         BatchNormalization(),
         Dense(32*32*num_channels, activation='elu'),
         BatchNormalization(),
-        Dense(32*32*num_channels, activation='elu'),
-        Lambda(lambda x: K.softmax(x)),
+        Dense(32*32*num_channels, activation='sigmoid'),
         Reshape([32, 32, num_channels]),
         # Softmax(axis=3)
     ]

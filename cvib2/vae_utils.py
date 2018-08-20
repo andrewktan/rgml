@@ -30,25 +30,27 @@ def load_datasets(dataset):
 
     elif dataset == 'ising':
         with open('/Users/andrew/Documents/rgml/ising_data/data_0_45.pkl', 'rb') as f:
-            image_train = np.reshape(pickle.load(f)['data'], [-1, 81, 81, 2])
+            image_train = np.reshape(
+                pickle.load(f)['data'], [-1, 81, 81, 2])
             image_train = image_train[:, 0:32, 0:32, :]
             image_train = image_train.astype(np.int32)
             image_train[image_train < 0] = 0
+            image_train = np.reshape(image_train[:, :, :, 1], [-1, 32, 32, 1])
 
         image_test = image_train
 
     elif dataset == 'dimer':
         with open('/Users/andrew/Documents/rgml/dimer_data/dimer.pkl', 'rb') as f:
-            image_train = np.reshape(pickle.load(
-                f)['data'], [-1, 64, 64, 4])
+            image_train = np.reshape(pickle.load(f)['data'], [-1, 64, 64, 4])
             image_train = image_train[:, 0:32, 0:32, :]
 
         image_test = image_train
 
     elif dataset == 'test':
         with open('/Users/andrew/Documents/rgml/test_data/split.pkl', 'rb') as f:
-            image_train = np.reshape(pickle.load(
-                f)['data'], [-1, 32, 32, 2])
+            image_train = np.reshape(
+                pickle.load(f)['data'], [-1, 32, 32, 2])
+            image_train = np.reshape(image_train[:, :, :, 1], [-1, 32, 32, 1])
 
         image_test = image_train
 

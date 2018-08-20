@@ -34,11 +34,11 @@ if args.dataset == 'cifar10':
     else:
         input_shape = (32, 32, 3)
 elif args.dataset == 'ising':
-    input_shape = (32, 32, 2)
+    input_shape = (32, 32, 1)
 elif args.dataset == 'dimer':
     input_shape = (32, 32, 4)
 elif args.dataset == 'test':
-    input_shape = (32, 32, 2)
+    input_shape = (32, 32, 1)
 
 # patch parameters
 sz = 8

@@ -53,9 +53,8 @@ if __name__ == '__main__':
             self.schedule = schedule
 
             if schedule == None:
-                decay = np.power(1/50, 1/(epochs-1))
+                decay = np.power(1/10, 1/(epochs-1))
                 self.schedule = [np.power(decay, x) for x in range(epochs)]
-
 
         def on_epoch_begin(self, epoch, logs={}):
             K.set_value(self.var, self.schedule[epoch])
@@ -96,10 +95,9 @@ if __name__ == '__main__':
 
     kl_loss = - K.sum(pz * K.log(pz + K.epsilon()), axis=-1)
 
-    beta_c = K.variable(1.)
-
     imag_loss = kl_loss + beta * reconstruction_loss
     imaginer.add_loss(imag_loss)
+    imaginer.add_loss(reconstruction_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
 
@@ -110,15 +108,12 @@ if __name__ == '__main__':
         plot_model(imaginer, to_file='out/imaginer.png', show_shapes=True)
 
     # train
-    beta_schedule = [1000*(epochs-1-x)/(epochs-1) + beta*x/(epochs-1) for x in range(epochs)]
-
     if args.train:
         imaginer.fit(image_train,
                      epochs=epochs,
                      batch_size=batch_size,
                      validation_data=(image_test, None),
-                     callbacks=[AnnealingCallback(tau),
-                         AnnealingCallback(beta_c, beta_schedule)])
+                     callbacks=[AnnealingCallback(tau)])
 
         imaginer.save_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
@@ -131,13 +126,13 @@ if __name__ == '__main__':
         K.set_value(tau, 1e-12)
 
     for idx in range(10):
-        img=imaginer.predict(
+        img = imaginer.predict(
             np.reshape(
                 image_test[idx], (1,) + input_shape
             )
         )
 
-        latents=encoder.predict(
+        latents = encoder.predict(
             np.reshape(
                 image_test[idx], (1,)+input_shape
             )
@@ -150,9 +145,9 @@ if __name__ == '__main__':
                        cmap=plt.cm.gray
                        )
         elif args.dataset == 'dimer':
-            actual_image=np.squeeze(np.argmax(image_test[idx], axis=-1))
+            actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
 
-            predicted_image=np.squeeze(img[:, :, :, 1] +
+            predicted_image = np.squeeze(img[:, :, :, 1] +
                                          img[:, :, :, 2]*2 +
                                          img[:, :, :, 3]*3)
 
@@ -160,8 +155,8 @@ if __name__ == '__main__':
                        cmap=plt.cm.gray
                        )
         elif args.dataset == 'ising' or args.dataset == 'test':
-            plt.imshow(np.concatenate((np.squeeze(img[:, :, :, 1]),
-                                       np.squeeze(np.argmax(image_test[idx], axis=-1)))
+            plt.imshow(np.concatenate((np.squeeze(img),
+                                       np.squeeze(image_test[idx]))
                                       ),
                        cmap=plt.cm.gray
                        )
