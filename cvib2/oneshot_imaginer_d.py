@@ -53,7 +53,7 @@ if __name__ == '__main__':
             self.schedule = schedule
 
             if schedule == None:
-                decay = np.power(1/10, 1/(epochs-1))
+                decay = np.power(1/50, 1/(epochs-1))
                 self.schedule = [np.power(decay, x) for x in range(epochs)]
 
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     beta_c = K.variable(1.)
 
-    imag_loss = kl_loss + beta_c * reconstruction_loss
+    imag_loss = kl_loss + beta * reconstruction_loss
     imaginer.add_loss(imag_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
@@ -127,6 +127,8 @@ if __name__ == '__main__':
     else:
         imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
+
+        K.set_value(tau, 1e-12)
 
     for idx in range(10):
         img=imaginer.predict(

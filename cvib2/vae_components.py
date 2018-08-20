@@ -2,7 +2,7 @@ import numpy as np
 from keras import Model
 from keras import backend as K
 from keras.layers import (BatchNormalization, Conv2D, Conv2DTranspose, Dense,
-                          Flatten, Input, Lambda, Reshape, Softmax)
+                          Flatten, Input, Lambda, Reshape)
 
 from vae_utils import *
 
@@ -100,7 +100,7 @@ def Patch_Encoder_D(inputs, r, c, sz,
                     activation='elu'),
               BatchNormalization(),
               Dense(latent_dim, activation='elu'),
-              Softmax()]
+              Lambda(lambda x: K.softmax(x))]
 
     # connect everything
     x = inputs
@@ -168,9 +168,13 @@ def VAE_Decoder_NC(inputs,
     # build decoder
     layers = [
         Dense(intermediate_dim, activation='elu'),
+        BatchNormalization(),
         Dense(intermediate_dim, activation='elu'),
+        BatchNormalization(),
         Dense(32*32*num_channels, activation='elu'),
-        Dense(32*32*num_channels, activation='sigmoid'),
+        BatchNormalization(),
+        Dense(32*32*num_channels, activation='elu'),
+        Lambda(lambda x: K.softmax(x)),
         Reshape([32, 32, num_channels]),
         # Softmax(axis=3)
     ]
