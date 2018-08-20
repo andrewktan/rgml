@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='latent_inputs')
-    if args.dataset == 'cifar10' and False:
+    if args.dataset == 'cifar10':
         decoder = VAE_Decoder(latent_inputs,
                               latent_dim=latent_dim,
                               intermediate_dim=intermediate_dim,
@@ -47,13 +47,18 @@ if __name__ == '__main__':
 
     # gumbel reparametrization and annealing
     class AnnealingCallback(Callback):
-        def __init__(self, tau, tau_0=1, decay=10/epochs):
-            self.tau = tau
-            self.tau_0 = tau_0
-            self.decay = decay
+        def __init__(self, var, schedule=None):
+            self.var = var
+
+            self.schedule = schedule
+
+            if schedule == None:
+                decay = np.power(1/10, 1/(epochs-1))
+                self.schedule = [np.power(decay, x) for x in range(epochs)]
+
 
         def on_epoch_begin(self, epoch, logs={}):
-            K.set_value(self.tau, self.tau_0/(1+self.decay*epoch))
+            K.set_value(self.var, self.schedule[epoch])
 
     tau = K.variable(1.)
 
@@ -91,7 +96,9 @@ if __name__ == '__main__':
 
     kl_loss = - K.sum(pz * K.log(pz + K.epsilon()), axis=-1)
 
-    imag_loss = kl_loss + beta * reconstruction_loss
+    beta_c = K.variable(1.)
+
+    imag_loss = kl_loss + beta_c * reconstruction_loss
     imaginer.add_loss(imag_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
     imaginer.summary()
@@ -103,12 +110,15 @@ if __name__ == '__main__':
         plot_model(imaginer, to_file='out/imaginer.png', show_shapes=True)
 
     # train
+    beta_schedule = [1000*(epochs-1-x)/(epochs-1) + beta*x/(epochs-1) for x in range(epochs)]
+
     if args.train:
         imaginer.fit(image_train,
                      epochs=epochs,
                      batch_size=batch_size,
                      validation_data=(image_test, None),
-                     callbacks=[AnnealingCallback(tau)])
+                     callbacks=[AnnealingCallback(tau),
+                         AnnealingCallback(beta_c, beta_schedule)])
 
         imaginer.save_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
@@ -119,13 +129,13 @@ if __name__ == '__main__':
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
     for idx in range(10):
-        img = imaginer.predict(
+        img=imaginer.predict(
             np.reshape(
                 image_test[idx], (1,) + input_shape
             )
         )
 
-        latents = encoder.predict(
+        latents=encoder.predict(
             np.reshape(
                 image_test[idx], (1,)+input_shape
             )
@@ -138,18 +148,11 @@ if __name__ == '__main__':
                        cmap=plt.cm.gray
                        )
         elif args.dataset == 'dimer':
-            actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
+            actual_image=np.squeeze(np.argmax(image_test[idx], axis=-1))
 
-            predicted_image = np.squeeze(img[:, :, :, 1] +
+            predicted_image=np.squeeze(img[:, :, :, 1] +
                                          img[:, :, :, 2]*2 +
                                          img[:, :, :, 3]*3)
-
-            loss_image = image_test[idx] * \
-                np.log(img[0]) + (1-image_test[idx]+1e-12) * \
-                np.log(1-img[0]+1e-12)
-
-            loss_image *= -1
-            loss_image = np.sum(loss_image, axis=2)
 
             plt.imshow(np.concatenate((predicted_image, actual_image)),
                        cmap=plt.cm.gray
