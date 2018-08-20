@@ -61,7 +61,7 @@ if __name__ == '__main__':
                 axis=0)
         elif args.dataset == 'ising' or args.dataset == 'test':
             receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
-                image_test[cluster_id == ld, r:r+sz, c:c+sz, 1],
+                    image_test[cluster_id == ld, r:r+sz, c:c+sz, 0],
                 axis=0)
 
         cluster += 1

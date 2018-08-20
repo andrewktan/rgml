@@ -68,9 +68,9 @@ if __name__ == '__main__':
 
     # cost function
     def mask(x):
-        m = np.zeros(input_shape[0:2], dtype=np.bool)
+        m = np.ones(input_shape[0:2], dtype=np.bool)
         m[r-5:r+sz+5, c-5:c+sz+5] = True
-        m[r+-2:r+sz+2, c-2:c+sz+2] = False
+        m[r:r+sz, c:c+sz] = False
 
         x = tf.transpose(x, perm=[1, 2, 0])
         x = tf.boolean_mask(x, m)
@@ -96,6 +96,8 @@ if __name__ == '__main__':
     kl_loss = - K.sum(pz * K.log(pz + K.epsilon()), axis=-1)
 
     imag_loss = kl_loss + beta * reconstruction_loss
+    imag_loss /= np.log(2)
+
     imaginer.add_loss(imag_loss)
     imaginer.add_loss(reconstruction_loss)
     imaginer.compile(optimizer=args.optimizer, loss=None)
@@ -123,7 +125,7 @@ if __name__ == '__main__':
         imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
-        K.set_value(tau, 1e-12)
+        K.set_value(tau, 1/100)
 
     for idx in range(10):
         img = imaginer.predict(
@@ -161,5 +163,5 @@ if __name__ == '__main__':
                        cmap=plt.cm.gray
                        )
 
-        print(np.argmax(latents))
+            print(latents[0, 21], latents[0, 28])
         plt.show()

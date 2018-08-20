@@ -28,6 +28,12 @@ def load_datasets(dataset):
             image_test = np.reshape(
                 np.mean(image_test, axis=-1), (-1,) + input_shape)
 
+            for idx, image in enumerate(image_train):
+                image_train[idx] = equalize_histogram(image)
+
+            for idx, image in enumerate(image_test):
+                image_test[idx] = equalize_histogram(image)
+
     elif dataset == 'ising':
         with open('/Users/andrew/Documents/rgml/ising_data/data_0_45.pkl', 'rb') as f:
             image_train = np.reshape(
@@ -59,10 +65,7 @@ def load_datasets(dataset):
 
 def gumbel_softmax(latent_dim, tau=0.05):
     def ret(pi):
-        gumbel_softmax_arg = (K.log(pi+K.epsilon())
-                              - K.log(-K.log(K.random_uniform_variable(
-                                  (latent_dim,), 0., 1.)))
-                              )/tau
+        gumbel_softmax_arg = K.log(pi+K.epsilon())/tau
         y = K.softmax(K.reshape(gumbel_softmax_arg,
                                 (-1, latent_dim)))
         return K.reshape(y, (-1, latent_dim))
@@ -137,3 +140,16 @@ def plot_results(models,
     plt.imshow(figure, cmap='Greys_r')
     plt.savefig(filename)
     plt.show()
+
+
+def equalize_histogram(image, number_bins=256):
+    # get image histogram
+    image_histogram, bins = np.histogram(
+        image.flatten(), number_bins, normed=True)
+    cdf = image_histogram.cumsum()  # cumulative distribution function
+    cdf = np.max(image) * cdf / cdf[-1]  # normalize
+
+    # use linear interpolation of cdf to find new pixel values
+    image_equalized = np.interp(image.flatten(), bins[:-1], cdf)
+
+    return image_equalized.reshape(image.shape)
