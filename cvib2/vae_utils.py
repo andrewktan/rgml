@@ -4,6 +4,7 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 from keras import backend as K
+from keras.callbacks import Callback
 from keras.datasets import cifar10
 
 from parameters import *
@@ -13,7 +14,6 @@ def load_datasets(dataset):
 
     label_train = None
     label_test = None
-
     if dataset == 'cifar10':
         (image_train, label_train), (image_test, label_test) = cifar10.load_data()
 
@@ -63,10 +63,10 @@ def load_datasets(dataset):
     return image_train, label_train, image_test, label_test
 
 
-def gumbel_softmax(latent_dim, tau=0.05):
-    def ret(pi):
-        gumbel_softmax_arg = K.log(pi+K.epsilon())/tau
-        y = K.softmax(K.reshape(gumbel_softmax_arg,
+def annealed_softmax(latent_dim, tau):
+    def ret(logits):
+        softmax_arg = logits / tau
+        y = K.softmax(K.reshape(softmax_arg,
                                 (-1, latent_dim)))
         return K.reshape(y, (-1, latent_dim))
 
@@ -153,3 +153,17 @@ def equalize_histogram(image, number_bins=256):
     image_equalized = np.interp(image.flatten(), bins[:-1], cdf)
 
     return image_equalized.reshape(image.shape)
+
+
+class AnnealingCallback(Callback):
+    def __init__(self, var, schedule=None):
+        self.var = var
+
+        self.schedule = schedule
+
+        if schedule == None:
+            decay = np.power(1/50, 1/(epochs-1))
+            self.schedule = [np.power(decay, x) for x in range(epochs)]
+
+    def on_epoch_begin(self, epoch, logs={}):
+        K.set_value(self.var, self.schedule[epoch])

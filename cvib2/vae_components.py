@@ -91,6 +91,8 @@ def Patch_Encoder_D(inputs, r, c, sz,
                     name='patch_encoder_d'):
 
     # build encoder
+    tau = K.variable(1.)
+
     layers = [Lambda(lambda x: x[:, r:r+sz, c:c+sz, :]),
               Flatten(),
               Dense(hidden_dim,
@@ -100,7 +102,9 @@ def Patch_Encoder_D(inputs, r, c, sz,
                     activation='elu'),
               BatchNormalization(),
               Dense(latent_dim, activation='elu'),
-              Lambda(lambda x: K.softmax(x))]
+              Lambda(annealed_softmax(latent_dim, tau))
+              # Lambda(lambda x: K.softmax(x)) # if not using annealed softmax
+              ]
 
     # connect everything
     x = inputs
@@ -110,7 +114,7 @@ def Patch_Encoder_D(inputs, r, c, sz,
 
     z_det = x
 
-    return Model(inputs, z_det)
+    return Model(inputs, z_det), tau
 
 
 def VAE_Decoder(inputs,

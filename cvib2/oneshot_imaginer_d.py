@@ -2,7 +2,6 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
-from keras.callbacks import Callback
 from keras.layers import Lambda
 from keras.losses import binary_crossentropy
 from keras.utils import plot_model
@@ -18,16 +17,16 @@ if __name__ == '__main__':
     # patch encoder
     inputs = Input(shape=input_shape, name='encoder_input')
 
-    encoder = Patch_Encoder_D(inputs, r, c, sz,
-                              hidden_dim=hidden_dim,
-                              intermediate_dim=intermediate_dim,
-                              latent_dim=latent_dim)
+    encoder, tau = Patch_Encoder_D(inputs, r, c, sz,
+                                   hidden_dim=hidden_dim,
+                                   intermediate_dim=intermediate_dim,
+                                   latent_dim=latent_dim)
 
     encoder.summary()
 
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='latent_inputs')
-    if args.dataset == 'cifar10':
+    if args.dataset == 'cifar10' and False:
         decoder = VAE_Decoder(latent_inputs,
                               latent_dim=latent_dim,
                               intermediate_dim=intermediate_dim,
@@ -45,25 +44,8 @@ if __name__ == '__main__':
     # imaginer model
     z = encoder(inputs)
 
-    # gumbel reparametrization and annealing
-    class AnnealingCallback(Callback):
-        def __init__(self, var, schedule=None):
-            self.var = var
-
-            self.schedule = schedule
-
-            if schedule == None:
-                decay = np.power(1/10, 1/(epochs-1))
-                self.schedule = [np.power(decay, x) for x in range(epochs)]
-
-        def on_epoch_begin(self, epoch, logs={}):
-            K.set_value(self.var, self.schedule[epoch])
-
-    tau = K.variable(1.)
-
-    z_samp = Lambda(gumbel_softmax(latent_dim, tau=tau))(z)
-
-    outputs = decoder(z_samp)
+    # softmax annealing
+    outputs = decoder(z)
     imaginer = Model(inputs, outputs, name='imaginer_d')
 
     # cost function
@@ -162,6 +144,4 @@ if __name__ == '__main__':
                                       ),
                        cmap=plt.cm.gray
                        )
-
-            print(latents[0, 21], latents[0, 28])
         plt.show()
