@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
         print(np.sum(cluster_id == ld))
 
-        if args.dataset == 'cifar10':
+        if args.dataset == 'cifar10' or args.dataset == 'mnist' or args.dataset == 'ising':
             receptive_fields[:, sz*cluster:sz*cluster+sz] = np.squeeze(
                 np.mean(
                     image_test[cluster_id == ld, r:r+sz, c:c+sz, :],
@@ -58,10 +58,6 @@ if __name__ == '__main__':
                 image_test[cluster_id == ld, r:r+sz, c:c+sz, 1] +
                 2*image_test[cluster_id == ld, r:r+sz, c:c+sz, 2] +
                 3*image_test[cluster_id == ld, r:r+sz, c:c+sz, 3],
-                axis=0)
-        elif args.dataset == 'ising' or args.dataset == 'test':
-            receptive_fields[:, sz*cluster:sz*cluster+sz] = np.mean(
-                image_test[cluster_id == ld, r:r+sz, c:c+sz, 0],
                 axis=0)
 
         cluster += 1

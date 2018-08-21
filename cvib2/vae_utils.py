@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras import backend as K
 from keras.callbacks import Callback
-from keras.datasets import cifar10
+from keras.datasets import cifar10, mnist
 
 from parameters import *
 
@@ -33,6 +33,14 @@ def load_datasets(dataset):
 
             for idx, image in enumerate(image_test):
                 image_test[idx] = equalize_histogram(image)
+    elif dataset == 'mnist':
+        (image_train_t, label_train), (image_test_t, label_test) = mnist.load_data()
+
+        image_train = np.zeros((60000, 32, 32, 1))
+        image_test = np.zeros((10000, 32, 32, 1))
+
+        image_train[:, 2:30, 2:30, 0] = image_train_t.astype('float32') / 255
+        image_test[:, 2:30, 2:30, 0] = image_test_t.astype('float32') / 255
 
     elif dataset == 'ising':
         with open('/Users/andrew/Documents/rgml/ising_data/data_0_45.pkl', 'rb') as f:
@@ -162,7 +170,7 @@ class AnnealingCallback(Callback):
         self.schedule = schedule
 
         if schedule == None:
-            decay = np.power(1/50, 1/(epochs-1))
+            decay = np.power(1/10, 1/(epochs-1))
             self.schedule = [np.power(decay, x) for x in range(epochs)]
 
     def on_epoch_begin(self, epoch, logs={}):

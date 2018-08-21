@@ -122,8 +122,10 @@ if __name__ == '__main__':
             )
         )
 
-        if args.dataset == 'cifar10':
-            plt.imshow(np.concatenate((np.squeeze(img),
+        if args.dataset == 'cifar10' or args.dataset == 'mnist' or args.dataset == 'ising':
+            output = np.squeeze(img)
+            output[r:r+sz, c:c+sz] = 0
+            plt.imshow(np.concatenate((output,
                                        np.squeeze(image_test[idx]))
                                       ),
                        cmap=plt.cm.gray
@@ -136,12 +138,6 @@ if __name__ == '__main__':
                                          img[:, :, :, 3]*3)
 
             plt.imshow(np.concatenate((predicted_image, actual_image)),
-                       cmap=plt.cm.gray
-                       )
-        elif args.dataset == 'ising' or args.dataset == 'test':
-            plt.imshow(np.concatenate((np.squeeze(img),
-                                       np.squeeze(image_test[idx]))
-                                      ),
                        cmap=plt.cm.gray
                        )
         plt.show()
