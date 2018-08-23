@@ -43,8 +43,6 @@ if __name__ == '__main__':
 
     # imaginer model
     z = encoder(inputs)
-
-    # softmax annealing
     outputs = decoder(z)
     imaginer = Model(inputs, outputs, name='imaginer_d')
 
@@ -107,37 +105,52 @@ if __name__ == '__main__':
         imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
-        K.set_value(tau, 1/100)
+        K.set_value(tau, 1/10)
 
-    for idx in range(10):
-        img = imaginer.predict(
-            np.reshape(
-                image_test[idx], (1,) + input_shape
-            )
+    # display
+    samples = [0, 1, 2, 6, 7]
+    num_samples = len(samples)
+
+    imgs = imaginer.predict(
+        np.reshape(
+            image_test[0:max(samples)+1], (-1,) + input_shape
         )
+    )
 
-        latents = encoder.predict(
-            np.reshape(
-                image_test[idx], (1,)+input_shape
-            )
+    latents = encoder.predict(
+        np.reshape(
+            image_test[0:max(samples)+1], (-1,)+input_shape
         )
+    )
 
-        if args.dataset == 'cifar10' or args.dataset == 'mnist' or args.dataset == 'ising':
+    if args.dataset == 'cifar10' or args.dataset == 'mnist' or args.dataset == 'ising':
+        disp = np.zeros((64, 32*num_samples, 3))
+        for idx, sid in enumerate(samples):
+            img = imgs[sid]
+            ref = image_test[sid]
             output = np.squeeze(img)
             output[r:r+sz, c:c+sz] = 0
-            plt.imshow(np.concatenate((output,
-                                       np.squeeze(image_test[idx]))
-                                      ),
-                       cmap=plt.cm.gray
-                       )
-        elif args.dataset == 'dimer':
-            actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
+            disp[0:32, idx*32:(idx+1)*32, 0] = output
+            disp[0:32, idx*32:(idx+1)*32, 1] = output
+            disp[0:32, idx*32:(idx+1)*32, 2] = output
+            disp[r:r+sz, idx*32+c:idx*32+c+sz,
+                 1] = np.squeeze(ref)[r:r+sz, c:c+sz]
+            disp[32:64, idx*32:(idx+1)*32, 0] = np.squeeze(ref)
+            disp[32:64, idx*32:(idx+1)*32, 1] = np.squeeze(ref)
+            disp[32:64, idx*32:(idx+1)*32, 2] = np.squeeze(ref)
 
-            predicted_image = np.squeeze(img[:, :, :, 1] +
-                                         img[:, :, :, 2]*2 +
-                                         img[:, :, :, 3]*3)
+            print(np.argmax(latents[sid]))
 
-            plt.imshow(np.concatenate((predicted_image, actual_image)),
-                       cmap=plt.cm.gray
-                       )
-        plt.show()
+        plt.imshow(disp, cmap=plt.cm.gray)
+
+    elif args.dataset == 'dimer':
+        actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
+
+        predicted_image = np.squeeze(img[:, :, :, 1] +
+                                     img[:, :, :, 2]*2 +
+                                     img[:, :, :, 3]*3)
+
+        plt.imshow(np.concatenate((predicted_image, actual_image)),
+                   cmap=plt.cm.gray
+                   )
+    plt.show()
