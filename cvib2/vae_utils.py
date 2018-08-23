@@ -170,8 +170,9 @@ class AnnealingCallback(Callback):
         self.schedule = schedule
 
         if schedule == None:
-            decay = epochs/10
-            self.schedule = [np.exp(-x/decay) for x in range(epochs)]
+            final = 1/1000
+            self.schedule = [max(final, np.power(final, x/(epochs-5)))
+                             for x in range(epochs)]
 
     def on_epoch_begin(self, epoch, logs={}):
         K.set_value(self.var, self.schedule[epoch])

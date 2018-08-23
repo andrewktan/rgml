@@ -8,23 +8,12 @@ from parameters import *
 from vae_components import *
 
 if __name__ == '__main__':
-    # import dataset
-    (image_train, label_train), (image_test, label_test) = cifar10.load_data()
-
-    image_train = np.reshape(image_train, [-1, 32, 32, 3])
-    image_test = np.reshape(image_test, [-1, 32, 32, 3])
-    image_train = image_train.astype('float32') / 255
-    image_test = image_test.astype('float32') / 255
-
-    if args.grayscale:
-        image_train = np.reshape(
-            np.mean(image_train, axis=-1), (-1,) + input_shape)
-        image_test = np.reshape(
-            np.mean(image_test, axis=-1), (-1,) + input_shape)
+    # load datasets
+    (image_train, label_train, image_test, label_test) = load_datasets(args.dataset)
 
     # load patch encoder grid
-    enc_rows = 8
-    enc_cols = 8
+    enc_rows = 4
+    enc_cols = 4
 
     num_clusters = latent_dim
     eye = np.eye(num_clusters)
@@ -40,10 +29,10 @@ if __name__ == '__main__':
             inputs = Input(shape=input_shape, name='encoder_input')
 
             # build and load patch encoder
-            encoder = Patch_Encoder_D(inputs, r*sz, c*sz, sz,
-                                      hidden_dim=hidden_dim,
-                                      intermediate_dim=intermediate_dim,
-                                      latent_dim=latent_dim)
+            encoder, _ = Patch_Encoder_D(inputs, r*sz, c*sz, sz,
+                                         hidden_dim=hidden_dim,
+                                         intermediate_dim=intermediate_dim,
+                                         latent_dim=latent_dim)
 
             encoder.load_weights("store/penc_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                                  (args.dataset, latent_dim, beta, r*sz, c*sz, input_shape[2]))

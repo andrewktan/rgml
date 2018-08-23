@@ -14,17 +14,10 @@ from vae_utils import *
 if __name__ == '__main__':
    # import dataset
 
-    if False:
-        (image_train, label_train), (image_test, label_test) = cifar10.load_data()
-        image_train = np.reshape(image_train, (-1, 32, 32, 3))
-        image_test = np.reshape(image_test, (-1, 32, 32, 3))
-        image_train = image_train.astype('float32') / 255
-        image_test = image_test.astype('float32') / 255
-        if args.grayscale:
-            image_train = np.reshape(
-                np.mean(image_train, axis=-1), (-1,) + input_shape)
-            image_test = np.reshape(
-                np.mean(image_test, axis=-1), (-1,) + input_shape)
+    if True:
+        # load datasets
+        (image_train, label_train, image_test,
+         label_test) = load_datasets(args.dataset)
     else:
         with open("out/cifar_cg.pkl", 'rb') as f:
             dump = pickle.load(f)

@@ -105,7 +105,7 @@ if __name__ == '__main__':
         imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
-        K.set_value(tau, 1/10)
+        K.set_value(tau, 1/1000)
 
     # display
     samples = [0, 1, 2, 6, 7]

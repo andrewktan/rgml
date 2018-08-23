@@ -19,13 +19,6 @@ if __name__ == '__main__':
                                    intermediate_dim=intermediate_dim,
                                    latent_dim=latent_dim)
 
-    # encoder
-    latents = encoder.predict(
-        np.reshape(
-            image_test, (-1,) + input_shape
-        )
-    )
-
     # decoder
     latent_inputs = Input(shape=(latent_dim,), name='latent_inputs')
     if args.dataset == 'cifar10' and False:
@@ -48,9 +41,19 @@ if __name__ == '__main__':
     imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                           (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
-    K.set_value(tau, 1/10)
+    K.set_value(tau, 1/1000)
 
-    dec_images = decoder.predict(np.eye(latent_dim))
+    latents = encoder.predict(
+        np.reshape(
+            image_test, (-1,) + input_shape
+        )
+    )
+
+    dec_images = imaginer.predict(
+        np.reshape(
+            image_test, (-1,) + input_shape
+        )
+    )
 
     # cluster
     cluster_id = np.argmax(latents, axis=-1)
@@ -77,11 +80,17 @@ if __name__ == '__main__':
             cluster_rf = np.squeeze(
                 np.mean(
                     image_test[cluster_id == ld, r:r+sz, c:c+sz, :],
-                    axis=0))
+                    axis=0)
+            )
 
             receptive_fields[:, sz*cluster:sz*cluster+sz] = cluster_rf
 
-            output = np.squeeze(dec_images[ld])
+            output = np.squeeze(
+                np.mean(
+                    dec_images[cluster_id == ld],
+                    axis=0)
+            )
+
             output[r:r+sz, c:c+sz] = 0
             disp[0:32, idx*32:(idx+1)*32, 0] = output
             disp[0:32, idx*32:(idx+1)*32, 1] = output
