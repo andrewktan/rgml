@@ -23,9 +23,9 @@ class DatasetIterator:
 
     def __next__(self):
 
-        indicies = np.random.randint(self.nsamp, size=self.mb_size)
+        indices = np.random.randint(self.nsamp, size=self.mb_size)
 
-        items = self.data[indicies, :]
+        items = self.data[indices, :]
         items = items.reshape(self.mb_size, self.sz ** 2)
 
         labels = self.labels[indices]

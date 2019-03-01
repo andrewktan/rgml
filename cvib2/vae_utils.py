@@ -3,6 +3,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import Callback
 from keras.datasets import cifar10, mnist
@@ -48,8 +49,8 @@ def load_datasets(dataset):
                 pickle.load(f)['data'], [-1, 81, 81, 2])
             image_train = image_train[:, 0:32, 0:32, :]
             image_train = image_train.astype(np.int32)
-            image_train[image_train < 0] = 0
-            image_train = np.reshape(image_train[:, :, :, 1], [-1, 32, 32, 1])
+            # image_train[image_train < 0] = 0
+            image_train = np.reshape(image_train, [-1, 32, 32, 2])
 
         image_test = image_train
 
@@ -76,7 +77,24 @@ def annealed_softmax(latent_dim, tau):
         softmax_arg = logits / tau
         y = K.softmax(K.reshape(softmax_arg,
                                 (-1, latent_dim)))
-        return K.reshape(y, (-1, latent_dim))
+        return y
+
+    return ret
+
+
+def gumbel_softmax(latent_dim, tau, softmax_dim=1):
+    if softmax_dim == 1:
+        shape = (latent_dim,)
+    else:
+        shape = (latent_dim, softmax_dim)
+
+    def ret(pi):
+        gumbel_softmax_arg = (pi - K.log(-K.log(K.random_uniform_variable(
+            shape, 0., 1.))+K.epsilon()))/tau
+
+        y = K.softmax(K.reshape(gumbel_softmax_arg,
+                                (-1,) + shape))
+        return y
 
     return ret
 
@@ -164,13 +182,12 @@ def equalize_histogram(image, number_bins=256):
 
 
 class AnnealingCallback(Callback):
-    def __init__(self, var, schedule=None):
+    def __init__(self, var, final=1e-3, schedule=None):
         self.var = var
 
         self.schedule = schedule
 
         if schedule == None:
-            final = 1/1000
             self.schedule = [max(final, np.power(final, x/(epochs-5)))
                              for x in range(epochs)]
 

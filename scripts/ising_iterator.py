@@ -32,7 +32,9 @@ if __name__ == '__main__':
     dfile = "%s%s" % (dspath, dsname)
 
     it = IsingIterator(dfile, mb_size=32)
-    samples = it.__next__()
 
-    plt.imshow(np.reshape(samples[0, :], (81, 81)), cmap=plt.cm.gray)
-    plt.show()
+    for i in range(10):
+        samples = it.__next__()[0]
+
+        plt.imshow(np.reshape(samples[0, :], (64, 64)), cmap=plt.cm.gray)
+        plt.show()

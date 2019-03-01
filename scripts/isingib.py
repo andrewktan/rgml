@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 from layered_coarse_grain import *
 
 # parameters #
@@ -9,9 +10,9 @@ perform_demo = True
 perform_beta_sweep = False
 
 dspath = '/Users/andrew/Documents/rgml/ising_data/'
-dsname = 'data_0_45'
+dsname = 'data_0_45_2'
 savefile = 'ising_ib_joint_81.npy'
-sz = 81     # size of the samples (sq)
+sz = 64     # size of the samples (sq)
 vsize = 3   # size of visible block (sq)
 stride = 3
 bsize = 4   # size of buffer (sq)
@@ -25,7 +26,7 @@ if perform_demo:
     model = LayeredCoarseGrain(dsname, dspath, 1, beta=7, debug=True)
     model.run()
 
-    # model.get_ib_object(0).visualize_clusters(debug=True)
+    model.get_ib_object(0).visualize_clusters(debug=True)
 
 # beta sweep #
 ##############

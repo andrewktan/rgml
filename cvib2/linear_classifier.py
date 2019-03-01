@@ -14,7 +14,7 @@ from vae_utils import *
 if __name__ == '__main__':
    # import dataset
 
-    if True:
+    if False:
         # load datasets
         (image_train, label_train, image_test,
          label_test) = load_datasets(args.dataset)

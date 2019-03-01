@@ -12,8 +12,8 @@ if __name__ == '__main__':
     (image_train, label_train, image_test, label_test) = load_datasets(args.dataset)
 
     # load patch encoder grid
-    enc_rows = 4
-    enc_cols = 4
+    enc_rows = input_shape[0] // sz
+    enc_cols = input_shape[1] // sz
 
     num_clusters = latent_dim
     eye = np.eye(num_clusters)

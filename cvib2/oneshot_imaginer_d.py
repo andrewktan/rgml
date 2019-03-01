@@ -34,16 +34,16 @@ if __name__ == '__main__':
                               num_conv=num_conv,
                               num_channels=input_shape[2])
     else:
-        decoder = VAE_Decoder_NC(latent_inputs,
-                                 latent_dim=latent_dim,
-                                 intermediate_dim=intermediate_dim,
-                                 num_channels=input_shape[2])
+        decoder, tau_d = VAE_Decoder_NCD(latent_inputs,
+                                         latent_dim=latent_dim,
+                                         intermediate_dim=intermediate_dim,
+                                         num_channels=input_shape[2])
 
     decoder.summary()
 
     # imaginer model
     z = encoder(inputs)
-    outputs = decoder(z)
+    outputs = decoder(z)[1]
     imaginer = Model(inputs, outputs, name='imaginer_d')
 
     # cost function
@@ -95,7 +95,8 @@ if __name__ == '__main__':
                      epochs=epochs,
                      batch_size=batch_size,
                      validation_data=(image_test, None),
-                     callbacks=[AnnealingCallback(tau)])
+                     callbacks=[AnnealingCallback(tau),
+                                AnnealingCallback(tau_d, final=1e-3)])
 
         imaginer.save_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
@@ -105,10 +106,11 @@ if __name__ == '__main__':
         imaginer.load_weights("store/imag_%s_ld%03d_b%03d_r%02d_c%02d_%d.h5" %
                               (args.dataset, latent_dim, beta, r, c, input_shape[2]))
 
-        K.set_value(tau, 1/1000)
+        K.set_value(tau, 1e-12)
+        K.set_value(tau_d, 1e-12)
 
     # display
-    samples = [0, 1, 2, 6, 7]
+    samples = range(10)
     num_samples = len(samples)
 
     imgs = imaginer.predict(
@@ -126,8 +128,8 @@ if __name__ == '__main__':
     if args.dataset == 'cifar10' or args.dataset == 'mnist' or args.dataset == 'ising':
         disp = np.zeros((64, 32*num_samples, 3))
         for idx, sid in enumerate(samples):
-            img = imgs[sid]
-            ref = image_test[sid]
+            img = imgs[sid, :, :, 1]
+            ref = image_test[sid, :, :, 1]
             output = np.squeeze(img)
             output[r:r+sz, c:c+sz] = 0
             disp[0:32, idx*32:(idx+1)*32, 0] = output
@@ -140,17 +142,23 @@ if __name__ == '__main__':
             disp[32:64, idx*32:(idx+1)*32, 2] = np.squeeze(ref)
 
             print(np.argmax(latents[sid]))
+            # print(latents[sid])
 
         plt.imshow(disp, cmap=plt.cm.gray)
 
     elif args.dataset == 'dimer':
-        actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
+        for idx, sid in enumerate(samples):
+            actual_image = np.squeeze(np.argmax(image_test[idx], axis=-1))
 
-        predicted_image = np.squeeze(img[:, :, :, 1] +
-                                     img[:, :, :, 2]*2 +
-                                     img[:, :, :, 3]*3)
+            predicted_image = np.squeeze(imgs[sid, :, :, 1] +
+                                         imgs[sid, :, :, 2]*2 +
+                                         imgs[sid, :, :, 3]*3)
 
-        plt.imshow(np.concatenate((predicted_image, actual_image)),
-                   cmap=plt.cm.gray
-                   )
+            print(np.argmax(latents[sid]))
+            print(latents[sid])
+
+            plt.imshow(np.concatenate((predicted_image, actual_image)),
+                       cmap=plt.cm.gray
+                       )
+            plt.show()
     plt.show()

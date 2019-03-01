@@ -188,3 +188,34 @@ def VAE_Decoder_NC(inputs,
     outputs = x
 
     return Model(inputs, outputs, name=name)
+
+
+def VAE_Decoder_NCD(inputs,
+                    latent_dim=16,
+                    intermediate_dim=128,
+                    num_channels=1,
+                    name='decoder'):
+
+    # build decoder
+    tau = K.variable(1.)
+
+    layers = [
+        Dense(intermediate_dim, activation='elu'),
+        Dense(intermediate_dim, activation='elu'),
+        Dense(32*32*num_channels, activation='elu'),
+        Dense(32*32*num_channels, activation='linear'),
+        Reshape([32 * 32, num_channels]),
+    ]
+
+    # connect everything
+    x = inputs
+
+    for layer in layers:
+        x = layer(x)
+
+    pi = Reshape([32, 32, num_channels])(x)
+
+    samp = Reshape([32, 32, num_channels])(
+        Lambda(gumbel_softmax(32 * 32, tau, softmax_dim=num_channels))(x))
+
+    return Model(inputs, [pi, samp], name=name), tau

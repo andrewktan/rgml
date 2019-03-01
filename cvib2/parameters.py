@@ -34,7 +34,7 @@ if args.dataset == 'cifar10':
     else:
         input_shape = (32, 32, 3)
 elif args.dataset == 'ising' or args.dataset == 'mnist' or args.dataset == 'test':
-    input_shape = (32, 32, 1)
+    input_shape = (32, 32, 2)
 elif args.dataset == 'dimer':
     input_shape = (32, 32, 4)
 
